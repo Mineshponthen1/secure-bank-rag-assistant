@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bank AI - New Employee Registration</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-900 text-slate-100 h-screen flex flex-col items-center justify-center font-sans p-4">
+
+    <div class="bg-slate-800 border border-slate-700 rounded-xl p-8 max-w-md w-full shadow-2xl space-y-6">
+        <div class="text-center space-y-2">
+            <div class="inline-block bg-emerald-600 p-3 rounded-xl text-white font-bold text-2xl mb-2">📋</div>
+            <h1 class="text-xl font-bold text-white">Employee Onboarding Portal</h1>
+            <p class="text-xs text-slate-400">Request access to the Secure Enterprise RAG Assistant</p>
+        </div>
+
+        <form id="standaloneRegisterForm" class="space-y-4">
+            <div>
+                <label class="text-xs font-semibold text-slate-300 block mb-1">Corporate Username</label>
+                <input type="text" id="regUser" required class="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-emerald-500" placeholder="e.g. sarah_finance" />
+            </div>
+            <div>
+                <label class="text-xs font-semibold text-slate-300 block mb-1">Secure Password</label>
+                <input type="password" id="regPass" required class="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-emerald-500" placeholder="••••••••" />
+            </div>
+            <div>
+                <label class="text-xs font-semibold text-slate-300 block mb-1">Request Department Access</label>
+                <select id="regDept" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                    <option value="HR">HR Department</option>
+                    <option value="Finance">Finance Department</option>
+                    <option value="Operations">Operations Department</option>
+                </select>
+            </div>
+            <div class="bg-slate-900 border border-slate-700 rounded-lg p-3 text-xs text-slate-400">
+                ℹ️ Accounts require admin approval before access is granted.
+            </div>
+            <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-medium py-2.5 rounded-lg text-sm transition-all shadow-md">Submit Access Request</button>
+        </form>
+
+        <div id="regMessage" class="text-xs text-center font-medium"></div>
+
+        <div class="text-center border-t border-slate-700 pt-4">
+            <a href="index.html" class="text-xs text-blue-400 hover:underline">Already approved? Go to Login</a>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('standaloneRegisterForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const username = document.getElementById('regUser').value.trim();
+            const password = document.getElementById('regPass').value.trim();
+            const department = document.getElementById('regDept').value;
+            const msg = document.getElementById('regMessage');
+
+            try {
+                const response = await fetch("/api/register", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ username, password, department })
+                });
+
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.detail || "Registration failed.");
+
+                msg.className = "text-xs text-center font-medium text-emerald-400";
+                msg.textContent = data.message + " You can now close this tab or return to login.";
+                document.getElementById('standaloneRegisterForm').reset();
+            } catch (err) {
+                msg.className = "text-xs text-center font-medium text-red-400";
+                msg.textContent = err.message;
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bank AI - Secure Admin Control Center</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col font-sans">
+
+    <!-- Header -->
+    <header class="bg-slate-800 border-b border-slate-700 px-6 py-4 flex items-center justify-between">
+        <div class="flex items-center space-x-3">
+            <div class="bg-amber-600 p-2 rounded-lg text-white font-bold">🛡️</div>
+            <div>
+                <h1 class="text-lg font-bold text-white">Secure Admin Control Center</h1>
+                <p class="text-xs text-slate-400">Authenticated RBAC & User Lifecycle Management</p>
+            </div>
+        </div>
+        <div>
+            <a href="index.html" class="bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs px-3 py-1.5 rounded-md transition-all">Go to Chat Portal</a>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-1 max-w-6xl mx-auto w-full p-6 space-y-6">
+
+        <!-- Pending Requests Section -->
+        <div class="bg-slate-800 border border-slate-700 rounded-xl p-6 shadow-lg">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-md font-bold text-white">📋 Pending Registration Requests</h2>
+                <button onclick="loadData()" class="bg-blue-600 hover:bg-blue-500 text-white text-xs px-3 py-1.5 rounded-md transition-all">Refresh Lists</button>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse text-sm">
+                    <thead>
+                        <tr class="border-b border-slate-700 text-xs text-slate-400 uppercase tracking-wider">
+                            <th class="py-3 px-4">Username</th>
+                            <th class="py-3 px-4">Requested Department</th>
+                            <th class="py-3 px-4">Assign Target Department</th>
+                            <th class="py-3 px-4 text-center">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="pendingTableBody" class="divide-y divide-slate-700/50">
+                        <tr><td colspan="4" class="py-4 text-center text-slate-400 text-xs">Authenticating session...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <div id="adminMessage" class="text-xs font-medium text-center mt-3"></div>
+        </div>
+
+        <!-- Active Users Section -->
+        <div class="bg-slate-800 border border-slate-700 rounded-xl p-6 shadow-lg">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-md font-bold text-emerald-400">👥 Active Enterprise Users & Departments</h2>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse text-sm">
+                    <thead>
+                        <tr class="border-b border-slate-700 text-xs text-slate-400 uppercase tracking-wider">
+                            <th class="py-3 px-4">ID</th>
+                            <th class="py-3 px-4">Username</th>
+                            <th class="py-3 px-4">Assigned Department</th>
+                            <th class="py-3 px-4">Role Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="activeUsersTableBody" class="divide-y divide-slate-700/50">
+                        <tr><td colspan="4" class="py-4 text-center text-slate-400 text-xs">Authenticating session...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Script Logic with Strict Authentication Guard -->
+    <script>
+        let authToken = "";   // CHANGED: we keep the wristband instead of a username
+
+        // NEW: one helper that builds the "here's my wristband" headers
+        function authHeaders() {
+            return {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${authToken}`
+            };
+        }
+
+        // NEW: if the server rejects our wristband, send the admin back to the login page
+        function handleExpired(response) {
+            if (response.status === 401 || response.status === 403) {
+                alert("Your admin session has expired or is not authorized. Please sign in again.");
+                window.location.href = "index.html";
+                return true;
+            }
+            return false;
+        }
+
+        // Enforce strict authentication check on page load
+        async function authenticateAdmin() {
+            const inputUser = prompt("🔒 Bank Security: Enter Administrator Username:") || "";
+            const inputPass = prompt("🔒 Bank Security: Enter Administrator Password:") || "";
+
+            if (!inputUser || !inputPass) {
+                alert("Access Denied: Credentials required.");
+                window.location.href = "index.html";
+                return;
+            }
+
+            try {
+                // Verify credentials against the backend login API
+                const response = await fetch("/api/login", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ username: inputUser, password: inputPass })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok || data.is_admin !== true) {
+                    alert("Unauthorized: Administrator privileges required.");
+                    window.location.href = "index.html";
+                    return;
+                }
+
+                // Authentication passed: keep the wristband
+                authToken = data.token;
+                loadData();
+
+            } catch (err) {
+                alert("Authentication server connection failed.");
+                window.location.href = "index.html";
+            }
+        }
+
+        async function loadData() {
+            await loadPendingUsers();
+            await loadActiveUsers();
+        }
+
+        async function loadPendingUsers() {
+            const tableBody = document.getElementById('pendingTableBody');
+            const msgDiv = document.getElementById('adminMessage');
+            msgDiv.textContent = "";
+
+            try {
+                const response = await fetch("/api/admin/pending-users", { headers: authHeaders() });
+                if (handleExpired(response)) return;
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.detail || "Failed to load pending users.");
+
+                if (data.length === 0) {
+                    tableBody.innerHTML = `<tr><td colspan="4" class="py-4 text-center text-slate-400 text-xs">No pending registration requests.</td></tr>`;
+                    return;
+                }
+
+                tableBody.innerHTML = "";
+                data.forEach(user => {
+                    const row = document.createElement('tr');
+                    row.className = "hover:bg-slate-700/30 transition-all";
+                    row.innerHTML = `
+                        <td class="py-3 px-4 font-semibold text-white">${escapeHtml(user.username)}</td>
+                        <td class="py-3 px-4 text-slate-300">${escapeHtml(user.department)}</td>
+                        <td class="py-3 px-4">
+                            <select id="dept-${user.id}" class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option value="${escapeHtml(user.department)}" selected>${escapeHtml(user.department)} (Requested)</option>
+                                <option value="HR">HR</option>
+                                <option value="Finance">Finance</option>
+                                <option value="Loans">Loans</option>
+                                <option value="Compliance">Compliance</option>
+                                <option value="Admin">Admin</option>
+                            </select>
+                        </td>
+                        <td class="py-3 px-4 text-center space-x-2">
+                            <button onclick="approveUser('${escapeHtml(user.username)}', ${user.id})" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs px-3 py-1.5 rounded-md transition-all font-medium">Approve</button>
+                            <button onclick="rejectUser('${escapeHtml(user.username)}')" class="bg-red-600 hover:bg-red-500 text-white text-xs px-3 py-1.5 rounded-md transition-all font-medium">Reject</button>
+                        </td>
+                    `;
+                    tableBody.appendChild(row);
+                });
+
+            } catch (err) {
+                tableBody.innerHTML = `<tr><td colspan="4" class="py-4 text-center text-red-400 text-xs">Error: ${escapeHtml(err.message)}</td></tr>`;
+            }
+        }
+
+        async function loadActiveUsers() {
+            const tableBody = document.getElementById('activeUsersTableBody');
+
+            try {
+                const response = await fetch("/api/admin/active-users", { headers: authHeaders() });
+                if (handleExpired(response)) return;
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.detail || "Failed to load active users.");
+
+                if (data.length === 0) {
+                    tableBody.innerHTML = `<tr><td colspan="4" class="py-4 text-center text-slate-400 text-xs">No active users found.</td></tr>`;
+                    return;
+                }
+
+                tableBody.innerHTML = "";
+                data.forEach(user => {
+                    const row = document.createElement('tr');
+                    row.className = "hover:bg-slate-700/30 transition-all";
+                    row.innerHTML = `
+                        <td class="py-3 px-4 text-slate-400 text-xs">#${user.id}</td>
+                        <td class="py-3 px-4 font-semibold text-white">${escapeHtml(user.username)}</td>
+                        <td class="py-3 px-4"><span class="bg-blue-600/30 text-blue-400 px-2 py-0.5 rounded text-xs border border-blue-500/30 font-medium">${escapeHtml(user.department)}</span></td>
+                        <td class="py-3 px-4">
+                            ${user.is_admin ? '<span class="bg-amber-600/30 text-amber-400 px-2.5 py-0.5 rounded text-xs border border-amber-500/30 font-bold">👑 Admin</span>' : '<span class="text-slate-400 text-xs">Standard Employee</span>'}
+                        </td>
+                    `;
+                    tableBody.appendChild(row);
+                });
+
+            } catch (err) {
+                tableBody.innerHTML = `<tr><td colspan="4" class="py-4 text-center text-red-400 text-xs">Error: ${escapeHtml(err.message)}</td></tr>`;
+            }
+        }
+
+        async function approveUser(targetUsername, userId) {
+            const assignedDepartment = document.getElementById(`dept-${userId}`).value;
+            const msgDiv = document.getElementById('adminMessage');
+
+            try {
+                const response = await fetch("/api/admin/approve-user", {
+                    method: "POST",
+                    headers: authHeaders(),
+                    body: JSON.stringify({ target_username: targetUsername, assigned_department: assignedDepartment })
+                });
+                if (handleExpired(response)) return;
+
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.detail || "Approval failed.");
+
+                msgDiv.className = "text-xs font-medium text-emerald-400 text-center mt-3";
+                msgDiv.textContent = data.message;
+                loadData();
+
+            } catch (err) {
+                msgDiv.className = "text-xs font-medium text-red-400 text-center mt-3";
+                msgDiv.textContent = `❌ Error: ${err.message}`;
+            }
+        }
+
+        async function rejectUser(targetUsername) {
+            const msgDiv = document.getElementById('adminMessage');
+
+            try {
+                const response = await fetch("/api/admin/reject-user", {
+                    method: "POST",
+                    headers: authHeaders(),
+                    body: JSON.stringify({ target_username: targetUsername })
+                });
+                if (handleExpired(response)) return;
+
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.detail || "Rejection failed.");
+
+                msgDiv.className = "text-xs font-medium text-amber-400 text-center mt-3";
+                msgDiv.textContent = data.message;
+                loadData();
+
+            } catch (err) {
+                msgDiv.className = "text-xs font-medium text-red-400 text-center mt-3";
+                msgDiv.textContent = `❌ Error: ${err.message}`;
+            }
+        }
+
+        function escapeHtml(text) {
+            if (!text) return "";
+            return String(text).replace(/[&<>"']/g, function(m) {
+                const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
+                return map[m];
+            });
+        }
+
+        // Trigger authentication check immediately when page opens
+        authenticateAdmin();
+    </script>
+
+</body>
+</html>

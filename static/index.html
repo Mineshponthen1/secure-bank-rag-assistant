@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bank AI - Secure Chat Portal</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-900 text-slate-100 h-screen flex flex-col font-sans overflow-hidden">
+
+    <!-- Header -->
+    <header class="bg-slate-800 border-b border-slate-700 px-6 py-4 flex items-center justify-between z-10">
+        <div class="flex items-center space-x-3">
+            <div class="bg-blue-600 p-2 rounded-lg text-white font-bold">🏦</div>
+            <div>
+                <h1 class="text-lg font-bold text-white">Bank AI Enterprise Assistant</h1>
+                <p class="text-xs text-slate-400">Secure RAG | RBAC Enforced</p>
+            </div>
+        </div>
+        <div id="userProfile" class="flex items-center space-x-4 hidden">
+            <div class="text-right">
+                <span id="displayUsername" class="text-sm font-bold text-white block"></span>
+                <span id="displayDepartment" class="text-xs uppercase tracking-wider text-blue-400 font-semibold"></span>
+            </div>
+            <!-- Admin Dashboard Link (Only visible if Admin) -->
+            <a id="adminPortalLink" href="admin.html" class="bg-amber-600 hover:bg-amber-500 text-white text-xs px-3 py-1.5 rounded-md transition-all font-medium hidden">Admin Dashboard</a>
+            <button onclick="logout()" class="bg-slate-700 hover:bg-red-600 text-slate-200 text-xs px-3 py-1.5 rounded-md transition-all">Sign Out</button>
+        </div>
+    </header>
+
+    <!-- Main Wrapper with Flex for Side Drawer -->
+    <div class="flex-1 flex overflow-hidden relative">
+
+        <!-- Main Chat Area -->
+        <main class="flex-1 max-w-4xl mx-auto w-full p-6 flex flex-col h-full">
+
+            <!-- Login Card -->
+            <div id="loginCard" class="bg-slate-800 border border-slate-700 rounded-xl p-6 shadow-lg max-w-md mx-auto my-auto w-full">
+                <h2 class="text-md font-bold text-white mb-4">🔐 Employee Portal Login</h2>
+                <form id="loginForm" class="space-y-4">
+                    <div>
+                        <label class="text-xs font-semibold text-slate-300 block mb-1">Username</label>
+                        <input type="text" id="loginUsername" required class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    </div>
+                    <div>
+                        <label class="text-xs font-semibold text-slate-300 block mb-1">Password</label>
+                        <input type="password" id="loginPassword" required class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    </div>
+                    <button type="submit" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-medium py-2 rounded-lg text-sm transition-all">Sign In to Chat</button>
+                    <div class="text-center pt-2">
+                        <a href="register.html" class="text-xs text-blue-400 hover:underline">Need an account? Request access</a>
+                    </div>
+                </form>
+                <div id="loginError" class="text-xs font-medium text-red-400 text-center mt-3"></div>
+            </div>
+
+            <!-- Chat Container (Hidden until login) -->
+            <div id="chatContainer" class="flex-1 flex flex-col hidden space-y-4 overflow-hidden">
+                <!-- Messages Box -->
+                <div id="chatMessages" class="flex-1 bg-slate-800 border border-slate-700 rounded-xl p-4 overflow-y-auto space-y-4 shadow-lg">
+                    <div class="bg-slate-900/50 border border-slate-700/50 rounded-lg p-3 text-xs text-slate-300">
+                        👋 Welcome! Type "hi" or ask any internal policy question. Role-Based Access Control (RBAC) is enforced at the database level.
+                    </div>
+                </div>
+
+                <!-- Query Input Form -->
+                <form id="queryForm" class="flex space-x-2">
+                    <input type="text" id="queryInput" placeholder="e.g., What are the corporate budget guidelines?" required class="flex-1 bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    <button type="submit" class="bg-blue-600 hover:bg-blue-500 text-white font-medium px-6 py-3 rounded-xl text-sm transition-all shadow-md">Send</button>
+                </form>
+            </div>
+        </main>
+
+        <!-- Admin Side Drawer Inspector (Hidden by default) -->
+        <aside id="sourceDrawer" class="w-96 bg-slate-800 border-l border-slate-700 p-6 flex flex-col shadow-2xl transform translate-x-full transition-transform duration-300 ease-in-out absolute right-0 top-0 bottom-0 z-20">
+            <div class="flex items-center justify-between pb-4 border-b border-slate-700">
+                <h3 class="text-sm font-bold text-amber-400 flex items-center space-x-2">
+                    <span>🛡️</span> <span>Source Audit Inspector</span>
+                </h3>
+                <button onclick="closeSourceDrawer()" class="text-slate-400 hover:text-white text-lg font-bold">&times;</button>
+            </div>
+            <div id="drawerContent" class="flex-1 overflow-y-auto py-4 space-y-4 text-xs text-slate-300">
+                <p class="text-slate-500 italic">Click any citation pill to inspect its verified document chunk.</p>
+            </div>
+        </aside>
+
+    </div>
+
+    <!-- JavaScript Chat & Auth Logic -->
+    <script>
+        let currentUser = null;
+        let currentDepartment = null;
+        let isAdmin = false;
+        let authToken = null;   // NEW: the wristband we get at login
+
+        // Login Handler
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const username = document.getElementById('loginUsername').value.trim();
+            const password = document.getElementById('loginPassword').value.trim();
+            const errorDiv = document.getElementById('loginError');
+            errorDiv.textContent = "";
+
+            try {
+                const response = await fetch("/api/login", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ username, password })
+                });
+
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.detail || "Login failed.");
+
+                currentUser = data.username;
+                currentDepartment = data.department;
+                isAdmin = data.is_admin;
+                authToken = data.token;   // NEW: keep the wristband
+
+                // Update UI State
+                document.getElementById('loginCard').classList.add('hidden');
+                document.getElementById('chatContainer').classList.remove('hidden');
+                document.getElementById('userProfile').classList.remove('hidden');
+                document.getElementById('displayUsername').textContent = currentUser;
+                document.getElementById('displayDepartment').textContent = `DEPARTMENT: ${currentDepartment} ${isAdmin ? '👑 (ADMIN)' : ''}`;
+
+                // Show Admin Dashboard link if user has admin rights
+                if (isAdmin) {
+                    document.getElementById('adminPortalLink').classList.remove('hidden');
+                }
+
+            } catch (err) {
+                errorDiv.textContent = err.message;
+            }
+        });
+
+        // Chat Query Handler
+        document.getElementById('queryForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const inputField = document.getElementById('queryInput');
+            const queryText = inputField.value.trim();
+            if (!queryText) return;
+
+            const chatMessages = document.getElementById('chatMessages');
+
+            // Append User Message
+            const userMsgDiv = document.createElement('div');
+            userMsgDiv.className = "flex flex-col items-end";
+            userMsgDiv.innerHTML = `
+                <div class="text-[10px] text-slate-400 mb-1">User (${escapeHtml(currentUser)})</div>
+                <div class="bg-blue-600 text-white rounded-xl px-4 py-2.5 max-w-xl text-sm shadow-md">${escapeHtml(queryText)}</div>
+            `;
+            chatMessages.appendChild(userMsgDiv);
+            inputField.value = "";
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+
+            // Append Loading Indicator
+            const loadingDiv = document.createElement('div');
+            loadingDiv.className = "flex flex-col items-start";
+            loadingDiv.id = "loadingIndicator";
+            loadingDiv.innerHTML = `
+                <div class="text-[10px] text-slate-400 mb-1">Bank AI Assistant</div>
+                <div class="bg-slate-700 text-slate-300 rounded-xl px-4 py-2.5 text-sm animate-pulse">Synthesizing secure response...</div>
+            `;
+            chatMessages.appendChild(loadingDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+
+            try {
+                const response = await fetch("/api/query", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${authToken}`   // NEW: show the wristband
+                    },
+                    body: JSON.stringify({ query: queryText })   // CHANGED: no more username
+                });
+
+                // NEW: if the wristband expired (e.g. server restarted), send user back to login
+                if (response.status === 401) {
+                    document.getElementById('loadingIndicator')?.remove();
+                    alert("Your session has expired. Please sign in again.");
+                    logout();
+                    return;
+                }
+
+                const data = await response.json();
+                document.getElementById('loadingIndicator').remove();
+
+                if (!response.ok) throw new Error(data.detail || "Query failed.");
+
+                // Render Conversational Answer
+                const botMsgDiv = document.createElement('div');
+                botMsgDiv.className = "flex flex-col items-start space-y-2 w-full my-2";
+
+                let resultsHtml = `
+                    <div class="text-[10px] text-slate-400 mb-1">Bank AI Assistant</div>
+                    <div class="bg-slate-700/90 border border-slate-600 rounded-xl p-4 text-sm text-slate-100 shadow-md whitespace-pre-wrap leading-relaxed w-full">${escapeHtml(data.answer)}</div>
+                `;
+
+                // Render sleek inline citation pills
+                if (data.results && data.results.length > 0) {
+                    resultsHtml += `<div class="flex flex-wrap gap-2 pt-2 items-center"><span class="text-[10px] text-slate-400 font-medium">Sources:</span>`;
+
+                    data.results.forEach((res) => {
+                        const resDataString = encodeURIComponent(JSON.stringify(res));
+                        resultsHtml += `
+                            <button onclick="openSourceDrawer('${resDataString}')" class="bg-slate-800 hover:bg-slate-750 text-amber-400 border border-slate-700 hover:border-amber-500/50 text-xs px-2.5 py-1 rounded-md transition-all font-medium flex items-center space-x-1 shadow-sm">
+                                <span>📄 ${escapeHtml(res.source_file)} (p. ${res.page_number})</span>
+                            </button>
+                        `;
+                    });
+                    resultsHtml += `</div>`;
+                }
+
+                botMsgDiv.innerHTML = resultsHtml;
+                chatMessages.appendChild(botMsgDiv);
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+
+            } catch (err) {
+                document.getElementById('loadingIndicator')?.remove();
+                const errDiv = document.createElement('div');
+                errDiv.className = "flex flex-col items-start";
+                errDiv.innerHTML = `
+                    <div class="text-[10px] text-slate-400 mb-1">Bank AI Assistant</div>
+                    <div class="bg-red-900/40 border border-red-700 text-red-300 rounded-xl px-4 py-2.5 text-sm">❌ Error: ${escapeHtml(err.message)}</div>
+                `;
+                chatMessages.appendChild(errDiv);
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            }
+        });
+
+        function openSourceDrawer(encodedData) {
+            const res = JSON.parse(decodeURIComponent(encodedData));
+            const drawer = document.getElementById('sourceDrawer');
+            const content = document.getElementById('drawerContent');
+
+            content.innerHTML = `
+                <div class="space-y-3">
+                    <div>
+                        <span class="text-[10px] uppercase tracking-wider text-slate-400 block">Source Document</span>
+                        <strong class="text-white text-sm">${escapeHtml(res.source_file)}</strong>
+                    </div>
+                    <div>
+                        <span class="text-[10px] uppercase tracking-wider text-slate-400 block">Page Number</span>
+                        <span class="text-amber-400 font-bold text-sm">Page ${res.page_number}</span>
+                    </div>
+                    <div>
+                        <span class="text-[10px] uppercase tracking-wider text-slate-400 block">RBAC Authorized Departments</span>
+                        <div class="flex flex-wrap gap-1 mt-1">
+                            ${res.allowed_departments.map(d => `<span class="bg-blue-600/30 text-blue-400 px-2 py-0.5 rounded text-[10px] border border-blue-500/30">${escapeHtml(d)}</span>`).join('')}
+                        </div>
+                    </div>
+                    <div class="pt-2 border-t border-slate-700">
+                        <span class="text-[10px] uppercase tracking-wider text-slate-400 block mb-1">Retrieved Chunk Content</span>
+                        <div class="bg-slate-900 border border-slate-700 rounded-lg p-3 text-slate-200 whitespace-pre-wrap leading-relaxed text-xs">
+                            ${escapeHtml(res.content)}
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            drawer.classList.remove('translate-x-full');
+        }
+
+        function closeSourceDrawer() {
+            const drawer = document.getElementById('sourceDrawer');
+            drawer.classList.add('translate-x-full');
+        }
+
+        function logout() {
+            currentUser = null;
+            currentDepartment = null;
+            isAdmin = false;
+            authToken = null;   // NEW: throw away the wristband
+            closeSourceDrawer();
+            document.getElementById('chatContainer').classList.add('hidden');
+            document.getElementById('userProfile').classList.add('hidden');
+            document.getElementById('adminPortalLink').classList.add('hidden');
+            document.getElementById('loginCard').classList.remove('hidden');
+            document.getElementById('loginUsername').value = "";
+            document.getElementById('loginPassword').value = "";
+            document.getElementById('chatMessages').innerHTML = `
+                <div class="bg-slate-900/50 border border-slate-700/50 rounded-lg p-3 text-xs text-slate-300">
+                    👋 Welcome! Type "hi" or ask any internal policy question. Role-Based Access Control (RBAC) is enforced at the database level.
+                </div>
+            `;
+        }
+
+        function escapeHtml(text) {
+            if (text === null || text === undefined) return "";
+            return String(text).replace(/[&<>"']/g, function(m) {
+                const map = {
+                    '&': '&amp;',
+                    '<': '&lt;',
+                    '>': '&gt;',
+                    '"': '&quot;',
+                    "'": '&#039;'
+                };
+                return map[m];
+            });
+        }
+    </script>
+
+</body>
+</html>
