@@ -18,13 +18,19 @@ from fastapi.staticfiles import StaticFiles
 
 app = FastAPI(title="Secure Enterprise RAG Bank Assistant")
 
-# Enable CORS for frontend integration
+# CORS: only these websites may call this API from a browser
+ALLOWED_ORIGINS = [
+    "http://localhost:8000",   # this app's own pages
+    "http://127.0.0.1:8000",   # same, by IP address
+    "http://localhost:3000",   # future Next.js (React) front end
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=ALLOWED_ORIGINS,
+    allow_credentials=False,                       # we use wristbands, not cookies
+    allow_methods=["GET", "POST"],                 # the only methods our API uses
+    allow_headers=["Content-Type", "Authorization"],
 )
 
 # Connect to Local Weaviate & Ollama
