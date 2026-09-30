@@ -362,7 +362,7 @@ def secure_rag_query(data: QueryRequest, user: dict = Depends(get_current_user))
     response = collection.query.near_vector(
         near_vector=vector,
         filters=rbac_filter,
-        limit=3,
+        limit=5,
         return_metadata=MetadataQuery(distance=True)
     )
 
@@ -407,16 +407,18 @@ def secure_rag_query(data: QueryRequest, user: dict = Depends(get_current_user))
 
     system_prompt = f"""You are a secure enterprise banking policy assistant for the {department} department.
 
-Answer the user's question using ONLY the numbered sources below.
+Sources:
+{context_str}
 
-Citation rules:
-- After every sentence that uses information from a source, add that source's number in square brackets, like [1] or [2].
-- Only use the numbers of the sources listed below. Never invent a source number.
+Instructions:
+- Answer the user's question using ONLY the numbered sources above.
+- After EVERY sentence that uses information from a source, add that source's number in square brackets, like [1] or [2].
+- Only use the numbers of the sources listed above. Never invent a source number.
 - If the sources do not contain the answer, say the information is not available in your authorized department guidelines, and do not add any citation.
 - Do not make up information.
 
-Sources:
-{context_str}
+Example of the required format (the content is made up; only the format matters):
+"Payments above the limit need two approvals [1]. Requests must be submitted in writing [3]."
 """
 
     try:
@@ -424,7 +426,7 @@ Sources:
             model="llama3.2",
             messages=[
                 {"role": "system", "content": system_prompt},
-                {"role": "user", "content": data.query}
+                {"role": "user", "content": f"{data.query}\n\nRemember: put [number] citations after every sentence."}
             ]
         )
         answer_text = ollama_res['message']['content']
