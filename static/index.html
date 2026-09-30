@@ -242,19 +242,25 @@
             }
         });
 
-        // Turn [1], [2] in the answer into clickable footnote buttons
+                // Turn [1] into a clickable footnote, and [1?] into a red "unverified" warning footnote
         function renderAnswerWithCitations(answer, results) {
             const byRef = {};
             (results || []).forEach(r => { byRef[r.ref] = r; });
 
-            return escapeHtml(answer).replace(/\[(\d+)\]/g, (match, n) => {
+            return escapeHtml(answer).replace(/\[(\d+)(\?)?\]/g, (match, n, unverified) => {
                 const res = byRef[parseInt(n)];
                 if (!res) return match;
                 const srcId = registerSource(res);
-                return `<button onclick="openSourceById('${srcId}')" title="${escapeHtml(res.source_file)} p.${res.page_number}" class="inline-flex items-center justify-center align-super text-[10px] font-bold text-amber-400 bg-slate-800 border border-amber-500/40 hover:bg-amber-500/20 rounded px-1 mx-0.5 leading-4">${n}</button>`;
+                const style = unverified
+                    ? "text-red-300 border-red-500/60 hover:bg-red-500/20"
+                    : "text-amber-400 border-amber-500/40 hover:bg-amber-500/20";
+                const label = unverified ? `⚠${n}` : n;
+                const title = unverified
+                    ? "The AI cited this source, but the code could not verify it"
+                    : `${escapeHtml(res.source_file)} p.${res.page_number}`;
+                return `<button onclick="openSourceById('${srcId}')" title="${title}" class="inline-flex items-center justify-center align-super text-[10px] font-bold bg-slate-800 border ${style} rounded px-1 mx-0.5 leading-4">${label}</button>`;
             });
         }
-
         // Wrap the supporting sentences in a yellow highlight
         function highlightContent(content, highlights) {
             let html = escapeHtml(content);
@@ -270,10 +276,12 @@
             const content = document.getElementById('drawerContent');
             const hasHighlights = res.highlights && res.highlights.length > 0;
 
-            let note = '';
+                        let note = '';
             if (hasHighlights) {
                 note = `<p class="text-[10px] text-amber-300 mb-2">🟨 Highlighted text is the passage that supports the answer.</p>`;
-            } else if (res.cited === false) {
+            } else if (res.cited) {
+                note = `<p class="text-[10px] text-red-300 mb-2">⚠ The AI cited this source, but no passage in it could be verified as supporting the answer.</p>`;
+            } else {
                 note = `<p class="text-[10px] text-slate-500 mb-2">This source was retrieved, but not used in the answer.</p>`;
             }
 
