@@ -38,7 +38,7 @@ app.add_middleware(
 client = weaviate.connect_to_local(host="localhost", port=8080)
 COLLECTION_NAME = "BankKnowledge"
 EMBEDDING_MODEL = "nomic-embed-text"
-MAX_DISTANCE = 0.43  # chunks further than this are not relevant (measured from test questions)
+MAX_DISTANCE = 0.41  # re-measured on real documents: relevant ≤0.397, near-misses ≥0.419 (see measure_distances.py)
 DB_FILE = "users_approval.db"
 
 
