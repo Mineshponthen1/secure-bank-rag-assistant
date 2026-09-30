@@ -1,5 +1,6 @@
 import os
 import re
+import yaml
 import sqlite3
 import bcrypt
 import jwt
@@ -40,6 +41,12 @@ COLLECTION_NAME = "BankKnowledge"
 EMBEDDING_MODEL = "nomic-embed-text"
 MAX_DISTANCE = 0.41  # re-measured on real documents: relevant ≤0.397, near-misses ≥0.419 (see measure_distances.py)
 DB_FILE = "users_approval.db"
+
+# Load the answer prompt from its versioned config file
+PROMPT_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "prompts", "rag_answer.yaml")
+with open(PROMPT_FILE, encoding="utf-8") as f:
+    PROMPT = yaml.safe_load(f)
+print(f"[prompt] loaded rag_answer v{PROMPT['version']} (model: {PROMPT['model']})")
 
 
 def hash_password(password: str) -> str:
@@ -463,28 +470,14 @@ def secure_rag_query(data: QueryRequest, user: dict = Depends(get_current_user))
     # Combine the numbered sources for the LLM
     context_str = "\n\n".join(retrieved_contexts)
 
-    system_prompt = f"""You are a secure enterprise banking policy assistant for the {department} department.
-
-Sources:
-{context_str}
-
-Instructions:
-- Answer the user's question using ONLY the numbered sources above.
-- After EVERY sentence that uses information from a source, add that source's number in square brackets, like [1] or [2].
-- Only use the numbers of the sources listed above. Never invent a source number.
-- If the sources do not contain the answer, say the information is not available in your authorized department guidelines, and do not add any citation.
-- Do not make up information.
-
-Example of the required format (the content is made up; only the format matters):
-"Payments above the limit need two approvals [1]. Requests must be submitted in writing [3]."
-"""
+    system_prompt = PROMPT["system"].format(department=department, sources=context_str)
 
     try:
         ollama_res = ollama.chat(
-            model="llama3.2",
+            model=PROMPT["model"],
             messages=[
                 {"role": "system", "content": system_prompt},
-                {"role": "user", "content": f"{data.query}\n\nRemember: put [number] citations after every sentence."}
+                {"role": "user", "content": PROMPT["user"].format(question=data.query)}
             ]
         )
         answer_text = ollama_res['message']['content']
