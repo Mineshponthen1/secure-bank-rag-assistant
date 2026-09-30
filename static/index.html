@@ -71,7 +71,7 @@
             </div>
         </main>
 
-        <!-- Admin Side Drawer Inspector (Hidden by default) -->
+        <!-- Source Audit Inspector Drawer (Hidden by default) -->
         <aside id="sourceDrawer" class="w-96 bg-slate-800 border-l border-slate-700 p-6 flex flex-col shadow-2xl transform translate-x-full transition-transform duration-300 ease-in-out absolute right-0 top-0 bottom-0 z-20">
             <div class="flex items-center justify-between pb-4 border-b border-slate-700">
                 <h3 class="text-sm font-bold text-amber-400 flex items-center space-x-2">
@@ -91,9 +91,9 @@
         let currentUser = null;
         let currentDepartment = null;
         let isAdmin = false;
-        let authToken = null;   // NEW: the wristband we get at login
+        let authToken = null;   // the wristband we get at login
 
-        // NEW: coat-check for sources. Buttons hold a short ticket id,
+        // Coat-check for sources: buttons hold a short ticket id,
         // not the whole text (text with apostrophes used to break the click)
         const sourceRegistry = {};
         let sourceCounter = 0;
@@ -128,7 +128,7 @@
                 currentUser = data.username;
                 currentDepartment = data.department;
                 isAdmin = data.is_admin;
-                authToken = data.token;   // NEW: keep the wristband
+                authToken = data.token;   // keep the wristband
 
                 // Update UI State
                 document.getElementById('loginCard').classList.add('hidden');
@@ -137,7 +137,6 @@
                 document.getElementById('displayUsername').textContent = currentUser;
                 document.getElementById('displayDepartment').textContent = `DEPARTMENT: ${currentDepartment} ${isAdmin ? '👑 (ADMIN)' : ''}`;
 
-                // Show Admin Dashboard link if user has admin rights
                 if (isAdmin) {
                     document.getElementById('adminPortalLink').classList.remove('hidden');
                 }
@@ -183,12 +182,12 @@
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
-                        "Authorization": `Bearer ${authToken}`   // NEW: show the wristband
+                        "Authorization": `Bearer ${authToken}`
                     },
-                    body: JSON.stringify({ query: queryText })   // CHANGED: no more username
+                    body: JSON.stringify({ query: queryText })
                 });
 
-                // NEW: if the wristband expired (e.g. server restarted), send user back to login
+                // If the wristband expired (e.g. server restarted), send user back to login
                 if (response.status === 401) {
                     document.getElementById('loadingIndicator')?.remove();
                     alert("Your session has expired. Please sign in again.");
@@ -201,7 +200,7 @@
 
                 if (!response.ok) throw new Error(data.detail || "Query failed.");
 
-                                // Render Conversational Answer (with clickable footnotes)
+                // Render Conversational Answer (with clickable footnotes)
                 const botMsgDiv = document.createElement('div');
                 botMsgDiv.className = "flex flex-col items-start space-y-2 w-full my-2";
 
@@ -242,7 +241,8 @@
                 chatMessages.scrollTop = chatMessages.scrollHeight;
             }
         });
-                // Turn [1], [2] in the answer into clickable footnote buttons
+
+        // Turn [1], [2] in the answer into clickable footnote buttons
         function renderAnswerWithCitations(answer, results) {
             const byRef = {};
             (results || []).forEach(r => { byRef[r.ref] = r; });
@@ -254,9 +254,28 @@
                 return `<button onclick="openSourceById('${srcId}')" title="${escapeHtml(res.source_file)} p.${res.page_number}" class="inline-flex items-center justify-center align-super text-[10px] font-bold text-amber-400 bg-slate-800 border border-amber-500/40 hover:bg-amber-500/20 rounded px-1 mx-0.5 leading-4">${n}</button>`;
             });
         }
-            function openSourceDrawer(res) {
+
+        // Wrap the supporting sentences in a yellow highlight
+        function highlightContent(content, highlights) {
+            let html = escapeHtml(content);
+            (highlights || []).forEach(h => {
+                const safe = escapeHtml(h);
+                html = html.split(safe).join(`<mark class="bg-amber-400/30 text-amber-100 rounded px-0.5">${safe}</mark>`);
+            });
+            return html;
+        }
+
+        function openSourceDrawer(res) {
             const drawer = document.getElementById('sourceDrawer');
             const content = document.getElementById('drawerContent');
+            const hasHighlights = res.highlights && res.highlights.length > 0;
+
+            let note = '';
+            if (hasHighlights) {
+                note = `<p class="text-[10px] text-amber-300 mb-2">🟨 Highlighted text is the passage that supports the answer.</p>`;
+            } else if (res.cited === false) {
+                note = `<p class="text-[10px] text-slate-500 mb-2">This source was retrieved, but not used in the answer.</p>`;
+            }
 
             content.innerHTML = `
                 <div class="space-y-3">
@@ -271,19 +290,22 @@
                     <div>
                         <span class="text-[10px] uppercase tracking-wider text-slate-400 block">RBAC Authorized Departments</span>
                         <div class="flex flex-wrap gap-1 mt-1">
-                            ${res.allowed_departments.map(d => `<span class="bg-blue-600/30 text-blue-400 px-2 py-0.5 rounded text-[10px] border border-blue-500/30">${escapeHtml(d)}</span>`).join('')}
+                            ${(res.allowed_departments || []).map(d => `<span class="bg-blue-600/30 text-blue-400 px-2 py-0.5 rounded text-[10px] border border-blue-500/30">${escapeHtml(d)}</span>`).join('')}
                         </div>
                     </div>
                     <div class="pt-2 border-t border-slate-700">
                         <span class="text-[10px] uppercase tracking-wider text-slate-400 block mb-1">Retrieved Chunk Content</span>
-                        <div class="bg-slate-900 border border-slate-700 rounded-lg p-3 text-slate-200 whitespace-pre-wrap leading-relaxed text-xs">
-                            ${escapeHtml(res.content)}
-                        </div>
+                        ${note}
+                        <div class="bg-slate-900 border border-slate-700 rounded-lg p-3 text-slate-200 whitespace-pre-wrap leading-relaxed text-xs">${highlightContent(res.content, res.highlights)}</div>
                     </div>
                 </div>
             `;
 
             drawer.classList.remove('translate-x-full');
+
+            // Scroll the highlighted sentence into view
+            const firstMark = content.querySelector('mark');
+            if (firstMark) firstMark.scrollIntoView({ block: 'center', behavior: 'smooth' });
         }
 
         function closeSourceDrawer() {
@@ -295,7 +317,7 @@
             currentUser = null;
             currentDepartment = null;
             isAdmin = false;
-            authToken = null;   // NEW: throw away the wristband
+            authToken = null;
             closeSourceDrawer();
             document.getElementById('chatContainer').classList.add('hidden');
             document.getElementById('userProfile').classList.add('hidden');

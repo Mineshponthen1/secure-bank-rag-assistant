@@ -93,6 +93,56 @@ def require_admin(user: dict = Depends(get_current_user)) -> dict:
 
 
 # ==========================================
+# CITATION HIGHLIGHTING (match answer sentences to source sentences)
+# ==========================================
+STOPWORDS = {
+    "the", "and", "for", "are", "with", "that", "this", "from", "has", "have",
+    "was", "were", "will", "your", "you", "our", "its", "any", "all", "not",
+    "according", "also", "additionally", "which", "their", "they", "must",
+}
+
+
+def key_words(text: str) -> set:
+    """Lowercase words of 3+ letters, minus common filler words."""
+    return {w for w in re.findall(r"[a-z0-9]+", text.lower())
+            if len(w) >= 3 and w not in STOPWORDS}
+
+
+def split_sentences(text: str) -> list:
+    return [s for s in re.split(r"(?<=[.!?])\s+", text) if s.strip()]
+
+
+def find_supporting_sentences(answer_text: str, results: list) -> None:
+    """For each cited source, find the source sentence that best matches the claim citing it."""
+    by_ref = {r["ref"]: r for r in results}
+    for r in results:
+        r["highlights"] = []
+
+        # Move footnotes that come after a full stop to before it: "year. [1]" -> "year [1]."
+    tidy = re.sub(r"([.!?])\s*((?:\[\d+\]\s*)+)",
+                  lambda m: " " + m.group(2).strip() + m.group(1) + " ",
+                  answer_text)
+
+    for claim in split_sentences(tidy):
+        refs = {int(n) for n in re.findall(r"\[(\d+)\]", claim)}
+        claim_words = key_words(re.sub(r"\[\d+\]", "", claim))
+        if not refs or not claim_words:
+            continue
+
+        for n in refs:
+            r = by_ref.get(n)
+            if not r:
+                continue
+            best, best_score = None, 0
+            for sentence in split_sentences(r["content"]):
+                score = len(claim_words & key_words(sentence))
+                if score > best_score:
+                    best, best_score = sentence, score
+            if best and best_score >= 2 and best not in r["highlights"]:
+                r["highlights"].append(best)
+
+
+# ==========================================
 # 1. DATABASE SETUP (USERS & PENDING TABLES)
 # ==========================================
 def init_db():
@@ -331,7 +381,7 @@ def secure_rag_query(data: QueryRequest, user: dict = Depends(get_current_user))
             continue
         print(f"[retrieval]   KEPT    {source_file} p.{page_number}  distance={distance:.3f}")
 
-        # NEW: give each kept source a number, like a footnote
+        # Give each kept source a number, like a footnote
         ref = len(results) + 1
         retrieved_contexts.append(f"[{ref}] (Source: {source_file}, page {page_number})\n{content}")
         results.append({
@@ -381,7 +431,7 @@ Sources:
     except Exception as e:
         answer_text = f"Error generating response from local LLM model: {str(e)}"
 
-    # NEW: check the AI's citations in code
+    # Check the AI's citations in code
     valid_refs = {r["ref"] for r in results}
     cited_refs = {int(n) for n in re.findall(r"\[(\d+)\]", answer_text)}
     invalid_refs = cited_refs - valid_refs
@@ -392,6 +442,13 @@ Sources:
         r["cited"] = r["ref"] in cited_refs
 
     print(f"[citations] cited={sorted(cited_refs & valid_refs)}  invalid_removed={sorted(invalid_refs)}")
+
+    # NEW: find the exact sentence in each source that supports the answer
+    find_supporting_sentences(answer_text, results)
+    for r in results:
+        for h in r["highlights"]:
+            short = " ".join(h.split())[:90]
+            print(f"[highlight] [{r['ref']}] {short}")
 
     return {
         "user": username,
