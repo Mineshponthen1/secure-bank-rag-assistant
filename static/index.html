@@ -93,6 +93,20 @@
         let isAdmin = false;
         let authToken = null;   // NEW: the wristband we get at login
 
+        // NEW: coat-check for sources. Buttons hold a short ticket id,
+        // not the whole text (text with apostrophes used to break the click)
+        const sourceRegistry = {};
+        let sourceCounter = 0;
+        function registerSource(res) {
+            const id = "src" + (++sourceCounter);
+            sourceRegistry[id] = res;
+            return id;
+        }
+        function openSourceById(id) {
+            const res = sourceRegistry[id];
+            if (res) openSourceDrawer(res);
+        }
+
         // Login Handler
         document.getElementById('loginForm').addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -187,24 +201,25 @@
 
                 if (!response.ok) throw new Error(data.detail || "Query failed.");
 
-                // Render Conversational Answer
+                                // Render Conversational Answer (with clickable footnotes)
                 const botMsgDiv = document.createElement('div');
                 botMsgDiv.className = "flex flex-col items-start space-y-2 w-full my-2";
 
                 let resultsHtml = `
                     <div class="text-[10px] text-slate-400 mb-1">Bank AI Assistant</div>
-                    <div class="bg-slate-700/90 border border-slate-600 rounded-xl p-4 text-sm text-slate-100 shadow-md whitespace-pre-wrap leading-relaxed w-full">${escapeHtml(data.answer)}</div>
+                    <div class="bg-slate-700/90 border border-slate-600 rounded-xl p-4 text-sm text-slate-100 shadow-md whitespace-pre-wrap leading-relaxed w-full">${renderAnswerWithCitations(data.answer, data.results)}</div>
                 `;
 
-                // Render sleek inline citation pills
+                // Source pills: numbered, and dimmed if the AI didn't actually use them
                 if (data.results && data.results.length > 0) {
                     resultsHtml += `<div class="flex flex-wrap gap-2 pt-2 items-center"><span class="text-[10px] text-slate-400 font-medium">Sources:</span>`;
 
                     data.results.forEach((res) => {
-                        const resDataString = encodeURIComponent(JSON.stringify(res));
+                        const srcId = registerSource(res);
+                        const used = res.cited;
                         resultsHtml += `
-                            <button onclick="openSourceDrawer('${resDataString}')" class="bg-slate-800 hover:bg-slate-750 text-amber-400 border border-slate-700 hover:border-amber-500/50 text-xs px-2.5 py-1 rounded-md transition-all font-medium flex items-center space-x-1 shadow-sm">
-                                <span>📄 ${escapeHtml(res.source_file)} (p. ${res.page_number})</span>
+                            <button onclick="openSourceById('${srcId}')" title="${used ? 'Cited in the answer' : 'Retrieved, but not cited in the answer'}" class="${used ? 'text-amber-400 border-slate-700 hover:border-amber-500/50' : 'text-slate-500 border-slate-800 opacity-60'} bg-slate-800 border text-xs px-2.5 py-1 rounded-md transition-all font-medium flex items-center space-x-1 shadow-sm">
+                                <span>[${res.ref}] 📄 ${escapeHtml(res.source_file)} (p. ${res.page_number})${used ? '' : ' · not used'}</span>
                             </button>
                         `;
                     });
@@ -227,9 +242,19 @@
                 chatMessages.scrollTop = chatMessages.scrollHeight;
             }
         });
+                // Turn [1], [2] in the answer into clickable footnote buttons
+        function renderAnswerWithCitations(answer, results) {
+            const byRef = {};
+            (results || []).forEach(r => { byRef[r.ref] = r; });
 
-        function openSourceDrawer(encodedData) {
-            const res = JSON.parse(decodeURIComponent(encodedData));
+            return escapeHtml(answer).replace(/\[(\d+)\]/g, (match, n) => {
+                const res = byRef[parseInt(n)];
+                if (!res) return match;
+                const srcId = registerSource(res);
+                return `<button onclick="openSourceById('${srcId}')" title="${escapeHtml(res.source_file)} p.${res.page_number}" class="inline-flex items-center justify-center align-super text-[10px] font-bold text-amber-400 bg-slate-800 border border-amber-500/40 hover:bg-amber-500/20 rounded px-1 mx-0.5 leading-4">${n}</button>`;
+            });
+        }
+            function openSourceDrawer(res) {
             const drawer = document.getElementById('sourceDrawer');
             const content = document.getElementById('drawerContent');
 

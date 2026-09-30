@@ -1,4 +1,5 @@
 import os
+import re
 import sqlite3
 import bcrypt
 import jwt
@@ -330,8 +331,11 @@ def secure_rag_query(data: QueryRequest, user: dict = Depends(get_current_user))
             continue
         print(f"[retrieval]   KEPT    {source_file} p.{page_number}  distance={distance:.3f}")
 
-        retrieved_contexts.append(content)
+        # NEW: give each kept source a number, like a footnote
+        ref = len(results) + 1
+        retrieved_contexts.append(f"[{ref}] (Source: {source_file}, page {page_number})\n{content}")
         results.append({
+            "ref": ref,
             "content": content,
             "source_file": source_file,
             "page_number": page_number,
@@ -347,21 +351,27 @@ def secure_rag_query(data: QueryRequest, user: dict = Depends(get_current_user))
             "answer": "I couldn't find this in the policy documents available to your department, so I can't answer it reliably. Please contact the relevant department directly.",
             "results": []
         }
-    
-    # Combine context chunks for the LLM
-    context_str = "\n\n".join(retrieved_contexts) if retrieved_contexts else "No authorized internal policy documents found."
+
+    # Combine the numbered sources for the LLM
+    context_str = "\n\n".join(retrieved_contexts)
 
     system_prompt = f"""You are a secure enterprise banking policy assistant for the {department} department.
-Answer the user's question accurately using ONLY the provided policy context below.
-If the answer cannot be found in the context, politely state that the information is not available in your authorized department guidelines. Do not make up information.
 
-Context:
+Answer the user's question using ONLY the numbered sources below.
+
+Citation rules:
+- After every sentence that uses information from a source, add that source's number in square brackets, like [1] or [2].
+- Only use the numbers of the sources listed below. Never invent a source number.
+- If the sources do not contain the answer, say the information is not available in your authorized department guidelines, and do not add any citation.
+- Do not make up information.
+
+Sources:
 {context_str}
 """
 
     try:
         ollama_res = ollama.chat(
-            model="llama3.2",  # Ensure this matches your local model or change to llama3.1 / mistral
+            model="llama3.2",
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": data.query}
@@ -370,6 +380,18 @@ Context:
         answer_text = ollama_res['message']['content']
     except Exception as e:
         answer_text = f"Error generating response from local LLM model: {str(e)}"
+
+    # NEW: check the AI's citations in code
+    valid_refs = {r["ref"] for r in results}
+    cited_refs = {int(n) for n in re.findall(r"\[(\d+)\]", answer_text)}
+    invalid_refs = cited_refs - valid_refs
+
+    for n in invalid_refs:                         # remove made-up source numbers
+        answer_text = answer_text.replace(f"[{n}]", "")
+    for r in results:                              # mark which sources were actually used
+        r["cited"] = r["ref"] in cited_refs
+
+    print(f"[citations] cited={sorted(cited_refs & valid_refs)}  invalid_removed={sorted(invalid_refs)}")
 
     return {
         "user": username,
