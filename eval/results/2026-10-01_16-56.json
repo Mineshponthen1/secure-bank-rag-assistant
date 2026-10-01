@@ -1,0 +1,148 @@
+{
+  "totals": {
+    "answer_total": 18,
+    "correct": 14,
+    "has_cites": 11,
+    "verified": 29,
+    "unverified": 6,
+    "refuse_total": 9,
+    "refused_ok": 9
+  },
+  "answers": [
+    {
+      "id": "hr-annual-leave",
+      "run": 1,
+      "answer": "A worker is entitled to at least 30 days of annual leave for each year of extended service [1]. \n\nFor a worker with less than one year of service, the entitlement is two days per month [1]. \n\nFor a part-time worker, the entitlement is specified in the employment contract, but the duration is limited to the actual working hours spent with the employer [1]. \n\nIn exceptional cases, a worker may be granted a study leave for 10 business days per year, if they have at least 2 years of service with the employer [2?]."
+    },
+    {
+      "id": "hr-annual-leave",
+      "run": 2,
+      "answer": "A worker is entitled to an annual leave of not less than thirty days for each year of extended service [1]. For a period of more than six months and less than one year, the worker is entitled to two days of annual leave [1]. If the worker's service ends before using his annual leave balance, he is entitled to a leave for parts of the last year he spent at work [1]."
+    },
+    {
+      "id": "hr-annual-leave",
+      "run": 3,
+      "answer": "According to the sources, the worker is entitled to at least 30 days of annual leave for each year of extended service [1a]. \n\nFor a part-time worker, the annual leave is specified in the employment contract [1b].\n\nAdditionally, the worker may be granted a leave from the balance of their annual leave during the Probation Period, and the worker shall retain the right to be compensated for the remainder of their annual leave balance [1c, 3]."
+    },
+    {
+      "id": "hr-maternity-leave",
+      "run": 1,
+      "answer": "The female worker is entitled to 60 days of maternity leave [1]. \n\nThe first 45 days of maternity leave are paid in full [1]. The remaining 15 days are paid half pay [1]. \n\nAfter using her maternity leave, the female worker may be absent from work without pay for up to 45 consecutive or intermittent days due to illness or childbirth [2]."
+    },
+    {
+      "id": "hr-maternity-leave",
+      "run": 2,
+      "answer": "The female worker is entitled to a maternity leave of sixty (60) days, which is divided into two parts: [1]. The first part consists of forty-five (45) days with full pay, and the second part consists of fifteen (15) days with half pay [1]. The female worker may also be absent from work without pay for a period not exceeding forty-five (45) consecutive or intermittent days due to illness or childbirth [2]."
+    },
+    {
+      "id": "hr-maternity-leave",
+      "run": 3,
+      "answer": "The female worker is entitled to 60 days of maternity leave, divided into two periods: 45 days with full pay [1] and 15 days with half pay [1]. \n\nThe female worker may be absent from work without pay for a period not exceeding 45 consecutive or intermittent days, if such absence is due to an illness suffered by her or her child as a result of pregnancy or childbirth [1]. \n\nShe is entitled to a leave of 30 days with full pay starting after the end of the maternity leave period, and the right to extend the leave for a period of 30 days without pay [2]. \n\nAdditionally, after returning from maternity leave and for a period not exceeding six months as of the date of giving birth, the female worker is entitled to one or two rest periods per day to breastfeed her child, provided that the period of both periods shall not exceed one hour [3]."
+    },
+    {
+      "id": "hr-probation",
+      "run": 1,
+      "answer": "According to the UAE Labour Law, the maximum length of a probation period is 6 months as of the date of commencing work, Article )9( [1]."
+    },
+    {
+      "id": "hr-probation",
+      "run": 2,
+      "answer": "The maximum length of a probation period is not specified in the provided sources."
+    },
+    {
+      "id": "hr-probation",
+      "run": 3,
+      "answer": "The maximum length of a probation period is six (6) months as of the date of commencing work [1]."
+    },
+    {
+      "id": "general-cdd",
+      "run": 1,
+      "answer": "Customer due diligence involves identifying the customer and verifying their identity, as well as understanding the nature of their business and ownership structure [1?]. It also involves identifying the beneficial owner and taking reasonable measures to verify their identity [1]. The purpose of customer due diligence is to prevent the unlawful use of legal persons and arrangements, as well as to mitigate the risks of money laundering and terrorist financing [3]. This process typically includes gathering information on the customer, their business, and their ownership structure, as well as conducting ongoing monitoring of the business relationship [4?]."
+    },
+    {
+      "id": "general-cdd",
+      "run": 2,
+      "answer": "Customer due diligence involves identifying the customer and verifying their identity [1]. This process should also include identifying the beneficial owner of the customer, taking reasonable measures to verify the identity of the beneficial owner [1]. Additionally, financial institutions should understand the purpose and intended nature of the business relationship [3?]."
+    },
+    {
+      "id": "general-cdd",
+      "run": 3,
+      "answer": "Customer due diligence involves identifying the customer and verifying their identity using reliable, independent source documents, data, or information [1]. It also involves identifying the beneficial owner and taking reasonable measures to verify their identity [1]. Additionally, customer due diligence requires understanding and, as appropriate, obtaining information on the purpose and intended nature of the business relationship [1]. Furthermore, financial institutions are required to conduct ongoing due diligence on the business relationship and scrutinize transactions to ensure they are consistent with the institution's knowledge of the customer, their business, and risk profile [1]."
+    },
+    {
+      "id": "general-pep",
+      "run": 1,
+      "answer": "Financial institutions should be required to have appropriate risk-management systems to determine whether the customer or beneficial owner is a politically exposed person. They should also obtain senior management approval for establishing or continuing a business relationship with a politically exposed person. Additionally, they should take reasonable measures to establish the source of wealth and source of funds. Financial institutions should also conduct enhanced ongoing monitoring of the business relationship. Furthermore, they should determine whether a customer or beneficial owner is a domestic PEP or a person who is or has been entrusted with a prominent function by an international organization. In cases of a higher risk business relationship with such persons, financial institutions should be required to apply the measures referred to in paragraphs (b), (c), and (d)."
+    },
+    {
+      "id": "general-pep",
+      "run": 2,
+      "answer": "Financial institutions should be required to have appropriate risk-management systems to determine whether the customer or beneficial owner is a politically exposed person. \nThey should also obtain senior management approval for establishing (or continuing) business relationships with politically exposed persons. \nAdditionally, financial institutions should take reasonable measures to establish the source of wealth and source of funds for politically exposed persons. \nThey should conduct enhanced ongoing monitoring of business relationships with politically exposed persons. \nFinancial institutions should also determine whether a customer or beneficial owner is a domestic PEP or a person who is or has been entrusted with a prominent function by an international organization."
+    },
+    {
+      "id": "general-pep",
+      "run": 3,
+      "answer": "Financial institutions should be required to have appropriate risk-management systems to determine whether the customer or beneficial owner is a politically exposed person. \nThey should also obtain senior management approval for establishing or continuing business relationships with politically exposed persons. \nFinancial institutions should take reasonable measures to establish the source of wealth and source of funds for politically exposed persons. \nIn cases of a higher risk business relationship, financial institutions should be required to apply the measures referred to in paragraphs (b), (c), and (d). \nThe requirements for all types of PEPs should also apply to family members or close associates of such PEPs."
+    },
+    {
+      "id": "ops-three-lines",
+      "run": 1,
+      "answer": "The three lines of defence in operational risk are: \n\n1. The first line of defence, typically business unit management, is responsible for identifying and managing the risks inherent in the products, activities, processes, and systems for which it is accountable [1?].\n2. The second line of defence, typically an independent corporate operational risk management function (CORF), challenges the operational risk and control assessments of the first line of defence, as well as monitors the implementation of appropriate controls or remediation actions [1?].\n3. The third line of defence provides independent assurance to the board of the appropriateness of the bank's operational risk management framework, reviewing the design and implementation of operational risk management systems and processes [2]."
+    },
+    {
+      "id": "ops-three-lines",
+      "run": 2,
+      "answer": "The three lines of defence in operational risk are: \n\n1. Business unit management, which is responsible for identifying and managing the risks inherent in the products, activities, processes and systems for which it is accountable. \n2. An independent corporate operational risk management function (CORF), which develops an independent view regarding business units' identified material operational risks, design and effectiveness of key controls, and risk tolerance. \n3. Independent assurance, which provides independent review and validation of the operational risk management framework, ensuring it is effective and in line with policies approved by the board of directors."
+    },
+    {
+      "id": "ops-three-lines",
+      "run": 3,
+      "answer": "The three lines of defence in operational risk are: \n\n1. The first line of defence, which is typically business unit management, is responsible for identifying and managing the operational risks inherent in their respective business units. \n2. The second line of defence, typically an independent corporate operational risk management function (CORF), challenges the operational risk and control assessments of the first line of defence, as well as monitors the implementation of appropriate controls or remediation actions.\n3. The third line of defence provides independent assurance to the board of the appropriateness of the bank's operational risk management framework, and reviews the design and implementation of the operational risk management systems and associated governance processes through the first and second lines of defence."
+    },
+    {
+      "id": "refuse-dress-code",
+      "run": 1,
+      "answer": "I couldn't find this in the policy documents available to your department, so I can't answer it reliably. Please contact the relevant department directly."
+    },
+    {
+      "id": "refuse-dress-code",
+      "run": 2,
+      "answer": "I couldn't find this in the policy documents available to your department, so I can't answer it reliably. Please contact the relevant department directly."
+    },
+    {
+      "id": "refuse-dress-code",
+      "run": 3,
+      "answer": "I couldn't find this in the policy documents available to your department, so I can't answer it reliably. Please contact the relevant department directly."
+    },
+    {
+      "id": "refuse-expenses",
+      "run": 1,
+      "answer": "I couldn't find this in the policy documents available to your department, so I can't answer it reliably. Please contact the relevant department directly."
+    },
+    {
+      "id": "refuse-expenses",
+      "run": 2,
+      "answer": "I couldn't find this in the policy documents available to your department, so I can't answer it reliably. Please contact the relevant department directly."
+    },
+    {
+      "id": "refuse-expenses",
+      "run": 3,
+      "answer": "I couldn't find this in the policy documents available to your department, so I can't answer it reliably. Please contact the relevant department directly."
+    },
+    {
+      "id": "refuse-rbac-hr-asks-ops",
+      "run": 1,
+      "answer": "I couldn't find this in the policy documents available to your department, so I can't answer it reliably. Please contact the relevant department directly."
+    },
+    {
+      "id": "refuse-rbac-hr-asks-ops",
+      "run": 2,
+      "answer": "I couldn't find this in the policy documents available to your department, so I can't answer it reliably. Please contact the relevant department directly."
+    },
+    {
+      "id": "refuse-rbac-hr-asks-ops",
+      "run": 3,
+      "answer": "I couldn't find this in the policy documents available to your department, so I can't answer it reliably. Please contact the relevant department directly."
+    }
+  ]
+}

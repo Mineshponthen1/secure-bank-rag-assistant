@@ -1,0 +1,55 @@
+# Golden questions for the report card.
+# user:             which account asks (also tests department permissions)
+# expect:           "answer" or "refuse"
+# must_contain_any: a correct answer must include at least one of these (lowercase match)
+
+- id: hr-annual-leave
+  user: ABC1
+  question: How many days of annual leave is a worker entitled to?
+  expect: answer
+  must_contain_any: ["30", "thirty"]
+
+- id: hr-maternity-leave
+  user: ABC1
+  question: How long is maternity leave for a female worker?
+  expect: answer
+  must_contain_any: ["60", "sixty"]
+
+- id: hr-probation
+  user: ABC1
+  question: What is the maximum length of a probation period?
+  expect: answer
+  must_contain_any: ["6 months", "six months", "six (6) months"]
+
+- id: general-cdd
+  user: ABC1
+  question: What does customer due diligence involve?
+  expect: answer
+  must_contain_any: ["identif", "verif"]
+
+- id: general-pep
+  user: ABC1
+  question: What measures apply to politically exposed persons?
+  expect: answer
+  must_contain_any: ["senior management", "source of wealth", "source of funds"]
+
+- id: ops-three-lines
+  user: ABC3
+  question: What are the three lines of defence in operational risk?
+  expect: answer
+  must_contain_any: ["audit"]
+
+- id: refuse-dress-code
+  user: ABC1
+  question: What is the office dress code?
+  expect: refuse
+
+- id: refuse-expenses
+  user: ABC1
+  question: What is the approval limit for expenses?
+  expect: refuse
+
+- id: refuse-rbac-hr-asks-ops
+  user: ABC1
+  question: What are the three lines of defence in operational risk?
+  expect: refuse

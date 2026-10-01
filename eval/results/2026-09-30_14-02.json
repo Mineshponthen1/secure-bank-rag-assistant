@@ -1,0 +1,148 @@
+{
+  "totals": {
+    "answer_total": 18,
+    "correct": 10,
+    "has_cites": 12,
+    "verified": 14,
+    "unverified": 26,
+    "refuse_total": 9,
+    "refused_ok": 6
+  },
+  "answers": [
+    {
+      "id": "hr-annual-leave",
+      "run": 1,
+      "answer": "According to the sources, a worker is entitled to at least 30 days of annual leave for each year of extended service. \n\nAdditionally, a part-time worker is entitled to an annual leave according to the actual working hours spent by the worker with the employer, but the duration is specified in the employment contract, and the exact amount is not specified in the sources.\n\nIt is also mentioned that a worker may be granted a leave from the balance of their annual leave during the Probation Period, and the worker shall retain the right to be compensated for the remainder of their annual leave balance."
+    },
+    {
+      "id": "hr-annual-leave",
+      "run": 2,
+      "answer": "According to the UAE Labor Law, a worker is entitled to an annual leave with full pay of not less than 30 days for each year of their extended service. Additionally, part-time workers are entitled to an annual leave according to the actual working hours spent by the worker with the employer, with the duration specified in the employment contract."
+    },
+    {
+      "id": "hr-annual-leave",
+      "run": 3,
+      "answer": "The worker is entitled to at least 30 days of annual leave per year of service [1?]. The entitlement is 30 days for each year of service [1?]. For part-time workers, the entitlement is based on the actual working hours spent with the employer [5?]. The worker may also be entitled to additional days of annual leave during the probation period [5]."
+    },
+    {
+      "id": "hr-maternity-leave",
+      "run": 1,
+      "answer": "According to the UAE Labour Law, a female worker is entitled to 60 days of maternity leave, consisting of the first 45 days with full pay and the next 15 days with half pay [1?]."
+    },
+    {
+      "id": "hr-maternity-leave",
+      "run": 2,
+      "answer": "The female worker is entitled to maternity leave of 60 days [4?]. \n\nThe first 45 days of maternity leave are with full pay [4?]. \n\nThe remaining 15 days are with half pay [4?]."
+    },
+    {
+      "id": "hr-maternity-leave",
+      "run": 3,
+      "answer": "The female worker is entitled to maternity leave of sixty (60) days [3]. The first forty-five (45) days of this leave are paid, and the remaining fifteen (15) days are half-paid [3]. After using her maternity leave, a female worker may be absent from work without pay for a period not exceeding forty-five (45) consecutive or intermittent days, if such absence is due to an illness suffered by her or her child [1]."
+    },
+    {
+      "id": "hr-probation",
+      "run": 1,
+      "answer": "There is no information available in my authorized department guidelines regarding the maximum length of a probation period [not available]."
+    },
+    {
+      "id": "hr-probation",
+      "run": 2,
+      "answer": "I don't have information on the maximum length of a probation period in my authorized department guidelines, [and] the UAE Labour Law does not specify a maximum length for the probation period. [According to source [1?], the length of the probation period can vary depending on the type of job, but the specific duration is not mentioned.]"
+    },
+    {
+      "id": "hr-probation",
+      "run": 3,
+      "answer": "I don't have information on the maximum length of a probation period from my authorized department guidelines."
+    },
+    {
+      "id": "general-cdd",
+      "run": 1,
+      "answer": "Customer due diligence involves identifying the customer and verifying their identity using reliable, independent source documents, data or information. This includes obtaining information on the purpose and intended nature of the business relationship. Additionally, financial institutions should understand the ownership and control structure of the customer, particularly when dealing with legal persons and arrangements. The customer's beneficial owner(s) must also be identified and verified, with measures taken to prevent any natural person from exerting control through other means."
+    },
+    {
+      "id": "general-cdd",
+      "run": 2,
+      "answer": "Customer due diligence (CDD) involves verifying the identity of customers and understanding the nature of their business relationships [1?]. \n\nIt includes identifying the customer and verifying its identity using reliable, independent source documents, data, or information [1?]. \n\nThis process also involves identifying the beneficial owner(s) of the customer and taking reasonable measures to verify their identity [2?]. \n\nAdditionally, CDD requires understanding and, as appropriate, obtaining information on the purpose and intended nature of the business relationship [1?]. \n\nIt also involves conducting ongoing due diligence on the business relationship and scrutiny of transactions undertaken throughout the course of that relationship [1?]."
+    },
+    {
+      "id": "general-cdd",
+      "run": 3,
+      "answer": "Customer due diligence involves identifying the customer and verifying their identity, including the beneficial owner [4?]. It also requires understanding and obtaining information on the purpose and intended nature of the business relationship [5?]. Additionally, financial institutions are required to conduct ongoing due diligence on the business relationship and scrutiny of transactions undertaken throughout the course of that relationship [5?]. \n\nThe scope of customer due diligence includes identifying the customer and verifying their identity, as well as taking reasonable measures to verify the identity of the beneficial owner [4?]. \n\nIt also involves applying each of the CDD measures under (a) to (d) above, but determining the extent of such measures using a risk-based approach (RBA)."
+    },
+    {
+      "id": "general-pep",
+      "run": 1,
+      "answer": "Politically Exposed Persons (PEPs) are individuals who are or have been entrusted with prominent public functions by a foreign country, for example Heads of State or of government, senior politicians, senior government, judicial or military officials, senior executives of state-owned corporations, important political party officials [1]. \n\nDomestic PEPs are individuals who are or have been entrusted domestically with prominent public functions, for example Heads of State or of government, senior politicians, senior government, judicial or military officials, senior executives of state-owned corporations, important political party officials [1].\n\nThe definition of PEPs is not intended to cover middle-ranking or more junior individuals in these categories [1].\n\nForeign PEPs are individuals who are or have been entrusted with prominent public functions by a foreign country, while domestic PEPs are individuals who are or have been entrusted with prominent public functions domestically [1].\n\nCountries should identify appropriate points of contact and procedures to respond to international requests for information regarding particular NPOs suspected of terrorist financing or involvement in other forms of terrorist support, including for PEPs [4]."
+    },
+    {
+      "id": "general-pep",
+      "run": 2,
+      "answer": "Politically exposed persons (PEPs) are individuals who are or have been entrusted with prominent public functions by a foreign country, for example Heads of State or of government, senior politicians, senior government, judicial or military officials, senior executives of state-owned corporations, important political party officials [1].\n\nDomestic PEPs are individuals who are or have been entrusted domestically with prominent public functions, for example Heads of State or of government, senior politicians, senior government, judicial or military officials, senior executives of state-owned corporations, important political party officials [1].\n\nThe definition of PEPs is not intended to cover middle-ranking or more junior individuals in the foregoing categories [1].\n\nFinancial institutions should apply enhanced due diligence measures to PEPs, which includes customer identification, verification of the PEP's position, and understanding of the PEP's business [5?].\n\nThe definition of PEPs and the measures to be applied may vary depending on the country's laws and regulations [1?]."
+    },
+    {
+      "id": "general-pep",
+      "run": 3,
+      "answer": "Politically Exposed Persons (PEPs) are subject to enhanced due diligence measures to prevent money laundering and terrorist financing [1?]. Financial institutions should verify the identity of PEPs and understand the nature of their business or profession [1?]. This includes checking public sources, such as public registers, to confirm the PEP's identity and position [1?]. In addition, financial institutions should understand the PEP's role and responsibilities, as well as any relevant laws or regulations governing their activities [1?]. Domestic PEPs are subject to the same measures as foreign PEPs, while foreign PEPs are subject to additional checks to ensure they are not using their position for illicit activities [1?]."
+    },
+    {
+      "id": "ops-three-lines",
+      "run": 1,
+      "answer": "The three lines of defence in operational risk are: business unit management, an independent corporate operational risk management function (CORF), and independent assurance.\n\nBusiness unit management is the first line of defence, responsible for identifying and managing operational risks inherent in their respective business units [1?]. The second line of defence, the CORF, develops an independent view regarding business units' material operational risks, design and effectiveness of key controls, and risk tolerance [1]. The third line of defence provides independent assurance to the board of the appropriateness of the bank's operational risk management framework [1]."
+    },
+    {
+      "id": "ops-three-lines",
+      "run": 2,
+      "answer": "The three lines of defence in operational risk are business unit management, an independent corporate operational risk management function, and independent assurance.\nBusiness unit management is the first line of defence and is responsible for identifying and managing operational risks inherent in their respective business units.\nThey are responsible for identifying and assessing the materiality of operational risks, and for reporting to senior management and the board of directors on the bank's risk exposures and capital positions [4?]. However, sound operational risk governance recognizes that business unit management is responsible for identifying and managing the risks inherent in the products, activities, processes and systems for which it is accountable.\nThe second line of defence is an independent corporate operational risk management function, also known as the second line of defence.\nIts responsibilities include developing an independent view regarding business units' material operational risks, and challenging the relevance and consistency of the business unit's implementation of operational risk management tools and measurement activities.\nThis function should have a reporting structure independent of the risk-generating business units and be responsible for the design, maintenance and ongoing development of the operational risk management and measurement policies, standards and guidelines.\nIt also includes a Compliance function, and should ensure that each line of defence is adequately resourced, has clearly defined roles and responsibilities, and promotes a sound risk management culture across the organization.\nThe third line of defence provides independent assurance to the board of the appropriateness of the bank's operational risk management framework.\nIts staff should not be involved in the development, implementation and operation of operational risk management processes by the other two lines of defence.\nThis function reviews generally are conducted by the bank's internal and/or external audit, but may also involve other suitably qualified independent third parties."
+    },
+    {
+      "id": "ops-three-lines",
+      "run": 3,
+      "answer": "The three lines of defence in operational risk are business unit management, an independent corporate operational risk management function (CORF), and independent assurance.\n\nBusiness unit management is the first line of defence, responsible for identifying and managing operational risks inherent in their respective business units.\n\nAn independent corporate operational risk management function (CORF) is the second line of defence, typically responsible for developing an independent view regarding business units' identified material operational risks.\n\nIndependent assurance is the third line of defence, providing independent verification and validation of the operational risk management framework (ORMF) and ensuring that it is effective in managing operational risks."
+    },
+    {
+      "id": "refuse-dress-code",
+      "run": 1,
+      "answer": "I couldn't find this in the policy documents available to your department, so I can't answer it reliably. Please contact the relevant department directly."
+    },
+    {
+      "id": "refuse-dress-code",
+      "run": 2,
+      "answer": "I couldn't find this in the policy documents available to your department, so I can't answer it reliably. Please contact the relevant department directly."
+    },
+    {
+      "id": "refuse-dress-code",
+      "run": 3,
+      "answer": "I couldn't find this in the policy documents available to your department, so I can't answer it reliably. Please contact the relevant department directly."
+    },
+    {
+      "id": "refuse-expenses",
+      "run": 1,
+      "answer": "I couldn't find this in the policy documents available to your department, so I can't answer it reliably. Please contact the relevant department directly."
+    },
+    {
+      "id": "refuse-expenses",
+      "run": 2,
+      "answer": "I couldn't find this in the policy documents available to your department, so I can't answer it reliably. Please contact the relevant department directly."
+    },
+    {
+      "id": "refuse-expenses",
+      "run": 3,
+      "answer": "I couldn't find this in the policy documents available to your department, so I can't answer it reliably. Please contact the relevant department directly."
+    },
+    {
+      "id": "refuse-rbac-hr-asks-ops",
+      "run": 1,
+      "answer": "The three lines of defence in operational risk are:\n\n1. First line of defence: This includes the business unit or department that owns the risk, and is responsible for identifying, assessing, and mitigating operational risks [1?].\n2. Second line of defence: This includes the risk management function or department that advises the business unit on operational risk management, and provides guidance on risk assessment, mitigation, and monitoring [2?].\n3. Third line of defence: This includes the external regulators or auditors that monitor the operational risk management activities of the organization, and provide an independent perspective on the effectiveness of the risk management processes [3?]."
+    },
+    {
+      "id": "refuse-rbac-hr-asks-ops",
+      "run": 2,
+      "answer": "The three lines of defense in operational risk are:\n\n1. First line of defense: The business unit or organization itself, which is responsible for managing and mitigating operational risks [1?].\n2. Second line of defense: The risk management function, which provides guidance, oversight, and monitoring to the business unit to ensure that operational risks are being identified and managed effectively [1?].\n3. Third line of defense: The external auditor or regulator, which provides independent assurance that the organization's risk management framework is effective and that operational risks are being managed adequately [1?]."
+    },
+    {
+      "id": "refuse-rbac-hr-asks-ops",
+      "run": 3,
+      "answer": "The three lines of defence in operational risk are:\n\n1. The first line of defence is to identify, assess, and manage operational risks [1?].\n2. The second line of defence is to implement controls and risk mitigation measures to reduce the risk of material loss [2?].\n3. The third line of defence is to monitor and review the effectiveness of these controls and risk mitigation measures [3]."
+    }
+  ]
+}
