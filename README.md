@@ -1,8 +1,11 @@
 # Secure Enterprise RAG Bank Assistant
 
+![CI](https://github.com/Mineshponthen1/secure-bank-rag-assistant/actions/workflows/ci.yml/badge.svg)
+
 A retrieval-augmented generation (RAG) assistant that answers employee questions from real banking and employment documents, with **department-level access control**, **verifiable citations**, and **refusal by code** when the evidence is too weak.
 
 Built in Python as Project 1 of an Applied AI Engineer portfolio roadmap. Everything runs locally: no document text leaves the machine.
+
 
 ---
 
