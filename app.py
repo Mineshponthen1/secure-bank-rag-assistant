@@ -1,5 +1,6 @@
 import os
 import re
+import json
 import time
 import sqlite3
 import bcrypt
@@ -15,6 +16,7 @@ import weaviate
 from weaviate.classes.query import Filter
 import ollama
 from fastapi import FastAPI, HTTPException, Depends
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -408,55 +410,41 @@ def reject_user(data: RejectRequest, admin: dict = Depends(require_admin)):
 
 
 # ==========================================
-# 3. SECURE RAG QUERY ENDPOINT WITH RBAC & LLM
+# 3. SECURE RAG QUERY (shared steps + two endpoints)
 # ==========================================
-@app.post("/api/query")
-def secure_rag_query(data: QueryRequest, user: dict = Depends(get_current_user)):
-    username = user["username"]
-    department = user["department"]
-    is_admin = user["is_admin"]
+GREETINGS = ["hi", "hello", "hey", "greetings", "good morning", "good evening", "good afternoon"]
 
-    cleaned_query = data.query.strip().lower()
-    if cleaned_query in ["hi", "hello", "hey", "greetings", "good morning", "good evening", "good afternoon"]:
-        current_hour = datetime.datetime.now().hour
 
-        if 5 <= current_hour < 12:
-            time_greeting = "Good morning"
-        elif 12 <= current_hour < 17:
-            time_greeting = "Good afternoon"
-        else:
-            time_greeting = "Good evening"
+def greeting_text() -> str:
+    hour = datetime.datetime.now().hour
+    time_greeting = "Good morning" if 5 <= hour < 12 else "Good afternoon" if 12 <= hour < 17 else "Good evening"
+    return (f"{time_greeting}! Hello! I am your Secure Enterprise Banking Policy Assistant. "
+            f"How can I help you navigate our compliance and department guidelines today?")
 
-        greeting_text = f"{time_greeting}! Hello! I am your Secure Enterprise Banking Policy Assistant. How can I help you navigate our compliance and department guidelines today?"
 
-        return {
-            "user": username,
-            "department": department,
-            "answer": greeting_text,
-            "results": []
-        }
-
-    # Build DB-Level Weaviate Security Filter
+def retrieve(query: str, department: str, is_admin: bool):
+    """Hybrid search + re-ranking, respecting department permissions.
+    Returns (numbered contexts for the AI, source details for the page)."""
     if is_admin or department == "Admin":
         rbac_filter = None
     else:
         rbac_filter = Filter.by_property("allowed_departments").contains_any([department])
 
-    vector = ollama.embeddings(model=EMBEDDING_MODEL, prompt=data.query)["embedding"]
+    vector = ollama.embeddings(model=EMBEDDING_MODEL, prompt=query)["embedding"]
     collection = client.collections.get(COLLECTION_NAME)
 
     # Step 1: hybrid search (meaning + keywords) builds a long list, respecting department permissions
     candidates = collection.query.hybrid(
-        query=data.query, vector=vector, alpha=0.5,
+        query=query, vector=vector, alpha=0.5,
         filters=rbac_filter, limit=CANDIDATES
     ).objects
 
     retrieved_contexts = []
     results = []
-    print(f"\n[retrieval] Question: {data.query}")
+    print(f"\n[retrieval] Question: {query}")
 
     # Step 2: the re-ranker reads the question with each candidate and keeps the best
-    reranked = rerank_with_retry(data.query, [str(o.properties["content"]) for o in candidates]) if candidates else []
+    reranked = rerank_with_retry(query, [str(o.properties["content"]) for o in candidates]) if candidates else []
     for r in reranked:
         obj = candidates[r.index]
         content = obj.properties.get("content")
@@ -464,7 +452,6 @@ def secure_rag_query(data: QueryRequest, user: dict = Depends(get_current_user))
         page_number = obj.properties.get("page_number")
         allowed_depts = obj.properties.get("allowed_departments")
         relevance = r.relevance_score
-        
 
         if relevance < MIN_RELEVANCE:
             print(f"[retrieval]   DROPPED {source_file} p.{page_number}  relevance={relevance:.3f}")
@@ -481,35 +468,22 @@ def secure_rag_query(data: QueryRequest, user: dict = Depends(get_current_user))
             "page_number": page_number,
             "allowed_departments": allowed_depts,
             "relevance": round(relevance, 3)
-            
         })
 
-    # Refuse by code (not by hoping the AI notices) when no chunk is relevant enough
-    if not retrieved_contexts:
-        return {
-            "user": username,
-            "department": department,
-            "answer": PROMPT["refusal"],
-            "results": []
-        }
+    return retrieved_contexts, results
 
-    # Combine the numbered sources for the LLM
+
+def build_messages(query: str, department: str, retrieved_contexts: list) -> list:
+    """Fill in the prompt template from prompts/rag_answer.yaml."""
     context_str = "\n\n".join(retrieved_contexts)
-    system_prompt = PROMPT["system"].format(department=department, sources=context_str)
+    return [
+        {"role": "system", "content": PROMPT["system"].format(department=department, sources=context_str)},
+        {"role": "user", "content": PROMPT["user"].format(question=query)},
+    ]
 
-    try:
-        ollama_res = ollama.chat(
-            model=PROMPT["model"],
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": PROMPT["user"].format(question=data.query)}
-            ]
-        )
-        answer_text = ollama_res['message']['content']
-    except Exception as e:
-        answer_text = f"Error generating response from local LLM model: {str(e)}"
 
-    # Check the AI's citations in code
+def finalize(answer_text: str, results: list) -> str:
+    """Check the AI's citations in code, then verify them against the sources."""
     valid_refs = {r["ref"] for r in results}
     cited_refs = {int(n) for n in re.findall(r"\[(\d+)\]", answer_text)}
     invalid_refs = cited_refs - valid_refs
@@ -522,14 +496,77 @@ def secure_rag_query(data: QueryRequest, user: dict = Depends(get_current_user))
     print(f"[citations] cited={sorted(cited_refs & valid_refs)}  invalid_removed={sorted(invalid_refs)}")
 
     # Verify each citation in code: highlight verified passages, mark unverified ones as [n?]
-    answer_text = verify_citations(answer_text, results)
+    return verify_citations(answer_text, results)
 
-    return {
-        "user": username,
-        "department": department,
-        "answer": answer_text,
-        "results": results
-    }
+
+@app.post("/api/query")
+def secure_rag_query(data: QueryRequest, user: dict = Depends(get_current_user)):
+    """Classic endpoint: returns the whole answer at once (used by the report card)."""
+    username, department, is_admin = user["username"], user["department"], user["is_admin"]
+
+    if data.query.strip().lower() in GREETINGS:
+        return {"user": username, "department": department, "answer": greeting_text(), "results": []}
+
+    retrieved_contexts, results = retrieve(data.query, department, is_admin)
+
+    # Refuse by code (not by hoping the AI notices) when no chunk is relevant enough
+    if not retrieved_contexts:
+        return {"user": username, "department": department, "answer": PROMPT["refusal"], "results": []}
+
+    try:
+        ollama_res = ollama.chat(model=PROMPT["model"], messages=build_messages(data.query, department, retrieved_contexts))
+        answer_text = ollama_res['message']['content']
+    except Exception as e:
+        answer_text = f"Error generating response from local LLM model: {str(e)}"
+
+    answer_text = finalize(answer_text, results)
+    return {"user": username, "department": department, "answer": answer_text, "results": results}
+
+
+@app.post("/api/query/stream")
+def secure_rag_query_stream(data: QueryRequest, user: dict = Depends(get_current_user)):
+    """Streaming endpoint: sends the answer piece by piece, one JSON message per line.
+    {"type": "token", "text": "..."}                      while the AI is writing
+    {"type": "final", "answer": "...", "results": [...]}  at the end, with verified citations
+    {"type": "error", "detail": "..."}                    if something goes wrong"""
+    department, is_admin = user["department"], user["is_admin"]
+
+    def send(event: dict) -> str:
+        return json.dumps(event) + "\n"
+
+    def events():
+        if data.query.strip().lower() in GREETINGS:
+            yield send({"type": "final", "answer": greeting_text(), "results": []})
+            return
+
+        try:
+            retrieved_contexts, results = retrieve(data.query, department, is_admin)
+        except HTTPException as e:
+            yield send({"type": "error", "detail": e.detail})
+            return
+
+        # Refuse by code (not by hoping the AI notices) when no chunk is relevant enough
+        if not retrieved_contexts:
+            yield send({"type": "final", "answer": PROMPT["refusal"], "results": []})
+            return
+
+        answer_text = ""
+        try:
+            stream = ollama.chat(model=PROMPT["model"],
+                                 messages=build_messages(data.query, department, retrieved_contexts),
+                                 stream=True)
+            for part in stream:
+                piece = part["message"]["content"]
+                answer_text += piece
+                yield send({"type": "token", "text": piece})
+        except Exception as e:
+            yield send({"type": "error", "detail": f"Error generating response from local LLM model: {e}"})
+            return
+
+        # The answer is complete: now check and verify the citations, then send the final version
+        yield send({"type": "final", "answer": finalize(answer_text, results), "results": results})
+
+    return StreamingResponse(events(), media_type="application/x-ndjson")
 
 
 # ==========================================

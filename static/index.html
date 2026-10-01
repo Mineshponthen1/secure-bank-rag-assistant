@@ -146,7 +146,7 @@
             }
         });
 
-        // Chat Query Handler
+        // Chat Query Handler (streaming)
         document.getElementById('queryForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             const inputField = document.getElementById('queryInput');
@@ -164,21 +164,20 @@
             `;
             chatMessages.appendChild(userMsgDiv);
             inputField.value = "";
-            chatMessages.scrollTop = chatMessages.scrollHeight;
 
-            // Append Loading Indicator
-            const loadingDiv = document.createElement('div');
-            loadingDiv.className = "flex flex-col items-start";
-            loadingDiv.id = "loadingIndicator";
-            loadingDiv.innerHTML = `
+            // The answer bubble: words will flow into it as they arrive
+            const botMsgDiv = document.createElement('div');
+            botMsgDiv.className = "flex flex-col items-start space-y-2 w-full my-2";
+            botMsgDiv.innerHTML = `
                 <div class="text-[10px] text-slate-400 mb-1">Bank AI Assistant</div>
-                <div class="bg-slate-700 text-slate-300 rounded-xl px-4 py-2.5 text-sm animate-pulse">Synthesizing secure response...</div>
+                <div class="answer-text bg-slate-700/90 border border-slate-600 rounded-xl p-4 text-sm text-slate-100 shadow-md whitespace-pre-wrap leading-relaxed w-full"><span class="animate-pulse text-slate-400">Searching the policy documents...</span></div>
             `;
-            chatMessages.appendChild(loadingDiv);
+            chatMessages.appendChild(botMsgDiv);
             chatMessages.scrollTop = chatMessages.scrollHeight;
+            const answerBox = botMsgDiv.querySelector('.answer-text');
 
             try {
-                const response = await fetch("/api/query", {
+                const response = await fetch("/api/query/stream", {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
@@ -189,60 +188,84 @@
 
                 // If the wristband expired (e.g. server restarted), send user back to login
                 if (response.status === 401) {
-                    document.getElementById('loadingIndicator')?.remove();
                     alert("Your session has expired. Please sign in again.");
                     logout();
                     return;
                 }
-
-                const data = await response.json();
-                document.getElementById('loadingIndicator').remove();
-
-                if (!response.ok) throw new Error(data.detail || "Query failed.");
-
-                // Render Conversational Answer (with clickable footnotes)
-                const botMsgDiv = document.createElement('div');
-                botMsgDiv.className = "flex flex-col items-start space-y-2 w-full my-2";
-
-                let resultsHtml = `
-                    <div class="text-[10px] text-slate-400 mb-1">Bank AI Assistant</div>
-                    <div class="bg-slate-700/90 border border-slate-600 rounded-xl p-4 text-sm text-slate-100 shadow-md whitespace-pre-wrap leading-relaxed w-full">${renderAnswerWithCitations(data.answer, data.results)}</div>
-                `;
-
-                // Source pills: numbered, and dimmed if the AI didn't actually use them
-                if (data.results && data.results.length > 0) {
-                    resultsHtml += `<div class="flex flex-wrap gap-2 pt-2 items-center"><span class="text-[10px] text-slate-400 font-medium">Sources:</span>`;
-
-                    data.results.forEach((res) => {
-                        const srcId = registerSource(res);
-                        const used = res.cited;
-                        resultsHtml += `
-                            <button onclick="openSourceById('${srcId}')" title="${used ? 'Cited in the answer' : 'Retrieved, but not cited in the answer'}" class="${used ? 'text-amber-400 border-slate-700 hover:border-amber-500/50' : 'text-slate-500 border-slate-800 opacity-60'} bg-slate-800 border text-xs px-2.5 py-1 rounded-md transition-all font-medium flex items-center space-x-1 shadow-sm">
-                                <span>[${res.ref}] 📄 ${escapeHtml(res.source_file)} (p. ${res.page_number})${used ? '' : ' · not used'}</span>
-                            </button>
-                        `;
-                    });
-                    resultsHtml += `</div>`;
+                if (!response.ok) {
+                    const err = await response.json().catch(() => ({}));
+                    throw new Error(err.detail || "Query failed.");
                 }
 
-                botMsgDiv.innerHTML = resultsHtml;
-                chatMessages.appendChild(botMsgDiv);
-                chatMessages.scrollTop = chatMessages.scrollHeight;
+                // Read the answer piece by piece. Each line is one JSON message from the server.
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let buffer = "";
+                let streamedText = "";
+
+                while (true) {
+                    const { value, done } = await reader.read();
+                    if (done) break;
+                    buffer += decoder.decode(value, { stream: true });
+                    const lines = buffer.split("\n");
+                    buffer = lines.pop();   // keep a half-received line until the rest arrives
+
+                    for (const line of lines) {
+                        if (!line.trim()) continue;
+                        const event = JSON.parse(line);
+
+                        if (event.type === "token") {
+                            // While streaming: show plain text (safe, no HTML)
+                            streamedText += event.text;
+                            answerBox.textContent = streamedText;
+                            chatMessages.scrollTop = chatMessages.scrollHeight;
+                        } else if (event.type === "final") {
+                            // Finished: swap in the verified answer with footnotes and source pills
+                            renderFinalAnswer(botMsgDiv, event.answer, event.results);
+                        } else if (event.type === "error") {
+                            throw new Error(event.detail);
+                        }
+                    }
+                }
 
             } catch (err) {
-                document.getElementById('loadingIndicator')?.remove();
-                const errDiv = document.createElement('div');
-                errDiv.className = "flex flex-col items-start";
-                errDiv.innerHTML = `
+                botMsgDiv.innerHTML = `
                     <div class="text-[10px] text-slate-400 mb-1">Bank AI Assistant</div>
                     <div class="bg-red-900/40 border border-red-700 text-red-300 rounded-xl px-4 py-2.5 text-sm">❌ Error: ${escapeHtml(err.message)}</div>
                 `;
-                chatMessages.appendChild(errDiv);
                 chatMessages.scrollTop = chatMessages.scrollHeight;
             }
         });
 
-                // Turn [1] into a clickable footnote, and [1?] into a red "unverified" warning footnote
+        // Build the finished answer: clickable footnotes + numbered source pills
+        function renderFinalAnswer(botMsgDiv, answer, results) {
+            const chatMessages = document.getElementById('chatMessages');
+
+            let html = `
+                <div class="text-[10px] text-slate-400 mb-1">Bank AI Assistant</div>
+                <div class="bg-slate-700/90 border border-slate-600 rounded-xl p-4 text-sm text-slate-100 shadow-md whitespace-pre-wrap leading-relaxed w-full">${renderAnswerWithCitations(answer, results)}</div>
+            `;
+
+            // Source pills: numbered, and dimmed if the AI didn't actually use them
+            if (results && results.length > 0) {
+                html += `<div class="flex flex-wrap gap-2 pt-2 items-center"><span class="text-[10px] text-slate-400 font-medium">Sources:</span>`;
+                results.forEach((res) => {
+                    const srcId = registerSource(res);
+                    const used = res.cited;
+                    html += `
+                        <button onclick="openSourceById('${srcId}')" title="${used ? 'Cited in the answer' : 'Retrieved, but not cited in the answer'}" class="${used ? 'text-amber-400 border-slate-700 hover:border-amber-500/50' : 'text-slate-500 border-slate-800 opacity-60'} bg-slate-800 border text-xs px-2.5 py-1 rounded-md transition-all font-medium flex items-center space-x-1 shadow-sm">
+                            <span>[${res.ref}] 📄 ${escapeHtml(res.source_file)} (p. ${res.page_number})${used ? '' : ' · not used'}</span>
+                        </button>
+                    `;
+                });
+                html += `</div>`;
+            }
+
+            botMsgDiv.innerHTML = html;
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        // Turn [1] into a clickable footnote, and [1?] into a red "unverified" warning footnote
         function renderAnswerWithCitations(answer, results) {
             const byRef = {};
             (results || []).forEach(r => { byRef[r.ref] = r; });
@@ -261,6 +284,7 @@
                 return `<button onclick="openSourceById('${srcId}')" title="${title}" class="inline-flex items-center justify-center align-super text-[10px] font-bold bg-slate-800 border ${style} rounded px-1 mx-0.5 leading-4">${label}</button>`;
             });
         }
+
         // Wrap the supporting sentences in a yellow highlight
         function highlightContent(content, highlights) {
             let html = escapeHtml(content);
@@ -276,7 +300,7 @@
             const content = document.getElementById('drawerContent');
             const hasHighlights = res.highlights && res.highlights.length > 0;
 
-                        let note = '';
+            let note = '';
             if (hasHighlights) {
                 note = `<p class="text-[10px] text-amber-300 mb-2">🟨 Highlighted text is the passage that supports the answer.</p>`;
             } else if (res.cited) {
