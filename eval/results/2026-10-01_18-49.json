@@ -1,0 +1,462 @@
+{
+  "runs": 1,
+  "totals": {
+    "answer_total": 38,
+    "correct": 37,
+    "has_cites": 29,
+    "verified": 64,
+    "unverified": 21,
+    "refuse_total": 6,
+    "refused_ok": 6,
+    "security_total": 5,
+    "security_ok": 5,
+    "errors": 0
+  },
+  "by_category": {
+    "hr": [
+      15,
+      15
+    ],
+    "general": [
+      12,
+      12
+    ],
+    "finance": [
+      5,
+      6
+    ],
+    "operations": [
+      5,
+      5
+    ],
+    "refusal": [
+      6,
+      6
+    ],
+    "security": [
+      5,
+      5
+    ]
+  },
+  "answers": [
+    {
+      "id": "hr-annual-leave",
+      "run": 1,
+      "passed": true,
+      "sources": [
+        "uae_labour_law.pdf"
+      ],
+      "answer": "A worker is entitled to an annual leave of not less than 30 days for each year of extended service [1]. \nFor a period of six months or less, a worker is entitled to two days of annual leave [1]. \nFor a period more than six months and less than one year, a worker is entitled to two days of annual leave [1]."
+    },
+    {
+      "id": "hr-maternity-leave",
+      "run": 1,
+      "passed": true,
+      "sources": [
+        "uae_labour_law.pdf"
+      ],
+      "answer": "The female Worker is entitled to maternity leave of 60 days, consisting of 45 days with full pay [1], 15 days with half pay [1]. She may also be absent from work without pay for a period not exceeding 45 consecutive or intermittent days, if her absence is due to an illness suffered by her or her child as a result of pregnancy or childbirth [1]."
+    },
+    {
+      "id": "hr-probation",
+      "run": 1,
+      "passed": true,
+      "sources": [
+        "uae_labour_law.pdf"
+      ],
+      "answer": "The Employer may appoint the Worker under the Probation Period for a period not exceeding six (6) months as of the date of commencing work, and he may terminate the Worker's service during this period after notifying the Worker in writing at least fourteen (14) days prior to the date specified for termination of service [1].\n\nNote: The maximum length of a probation period is 6 months, as stated in Article 9 of the UAE Labour Law [1]."
+    },
+    {
+      "id": "hr-notice-period",
+      "run": 1,
+      "passed": true,
+      "sources": [
+        "uae_labour_law.pdf"
+      ],
+      "answer": "The minimum notice period for terminating an employment contract is thirty (30) days [1]. This period is not less than thirty (30) days, and not more than ninety (90) days [1]."
+    },
+    {
+      "id": "hr-sick-leave",
+      "run": 1,
+      "passed": true,
+      "sources": [
+        "uae_labour_law.pdf"
+      ],
+      "answer": "A Worker may receive a sick leave of no more than (90) ninety consecutive or intermittent days per year [3?]. \n\nThe first fifteen (15) days of sick leave are paid in full [3?]. The following thirty (30) days are paid at half pay [3?]. The remaining days are unpaid [3?]."
+    },
+    {
+      "id": "hr-parental-leave",
+      "run": 1,
+      "passed": true,
+      "sources": [
+        "uae_labour_law.pdf"
+      ],
+      "answer": "According to the UAE Labour Law, a worker is entitled to parental leave for a period of 5 working days, for the worker (whether the father or the mother) who has a child, to care for their child [2?]."
+    },
+    {
+      "id": "hr-bereavement-spouse",
+      "run": 1,
+      "passed": true,
+      "sources": [
+        "uae_labour_law.pdf"
+      ],
+      "answer": "The Worker is entitled to a paid leave of five (5) days in the event of the death of the spouse [1]."
+    },
+    {
+      "id": "hr-working-hours",
+      "run": 1,
+      "passed": true,
+      "sources": [
+        "uae_labour_law.pdf"
+      ],
+      "answer": "The maximum normal working hours for Workers shall be eight (8) hours per day [1]."
+    },
+    {
+      "id": "hr-overtime-limit",
+      "run": 1,
+      "passed": true,
+      "sources": [
+        "uae_labour_law.pdf"
+      ],
+      "answer": "The maximum overtime a worker can work per day is 2 hours [1]. \n\nPlease note that this information is available in the UAE Labour Law."
+    },
+    {
+      "id": "hr-overtime-pay",
+      "run": 1,
+      "passed": true,
+      "sources": [
+        "uae_labour_law.pdf"
+      ],
+      "answer": "According to the sources, if circumstances of work necessitate that the Worker works overtime between 10 pm and 4 am, the Worker shall be entitled to the wage determined for normal working hours - calculated according to the basic wage - plus an increase equal to at least fifty percent (50%) of such wage [2]. \n\nFor other overtime work, the extra time shall be considered overtime, for which the Worker shall receive a wage equal to that corresponding to his normal working hours - calculated according to Federal Decree by Law No. (33) of 2021 Concerning Regulating Labor Relations - plus an increase of at least twenty-five percent (25%) of such wage [1]."
+    },
+    {
+      "id": "hr-gratuity",
+      "run": 1,
+      "passed": true,
+      "sources": [
+        "uae_labour_law.pdf"
+      ],
+      "answer": "The foreign full-time Worker is entitled to an end-of-service gratuity upon the end of his service, calculated according to the basic wage, as follows: a. The wage of twenty-one (21) days for each year of the first five years of service."
+    },
+    {
+      "id": "hr-minimum-age",
+      "run": 1,
+      "passed": true,
+      "sources": [
+        "uae_labour_law.pdf"
+      ],
+      "answer": "The minimum age for employing a juvenile is fifteen years of age [1]. "
+    },
+    {
+      "id": "hr-study-leave",
+      "run": 1,
+      "passed": true,
+      "sources": [
+        "uae_labour_law.pdf"
+      ],
+      "answer": "According to the UAE Labor Law, a worker may be granted a study leave for a period of ten (10) business days per year [2]."
+    },
+    {
+      "id": "hr-weekly-rest",
+      "run": 1,
+      "passed": true,
+      "sources": [
+        "uae_labour_law.pdf"
+      ],
+      "answer": "The worker shall be granted a paid weekly rest not less than one day, according to what is specified in the employment contract or the work organizational regulation [1]. It is permissible by a Cabinet resolution to increase the weekly rest day stipulated in Article (22) [1]. The worker shall be granted a paid weekly rest not less than one day, according to what is specified in the employment contract or the work organizational regulation, and it is permissible by a Cabinet resolution to increase the weekly rest day stipulated in Article (22) [1]. According to Article (22), the amount or type of wage shall be specified in the employment contract, and if it is not specified therein, the competent court shall determine it as a labor dispute [2?]. Article (22) does not specifically state the number of days of weekly rest, only that it shall be granted [2?]. The information is not available in your authorized department guidelines, and therefore, I cannot provide a specific number."
+    },
+    {
+      "id": "hr-carry-forward",
+      "run": 1,
+      "passed": true,
+      "sources": [
+        "uae_labour_law.pdf"
+      ],
+      "answer": "Yes, a worker may carry forward the balance of their annual leave, or days thereof, to the following year, subject to the applicable organizational regulations in the Establishment [1]."
+    },
+    {
+      "id": "general-cdd",
+      "run": 1,
+      "passed": true,
+      "sources": [
+        "fatf-recommendations-2012.pdf"
+      ],
+      "answer": "Customer due diligence involves verifying the identity of a customer and understanding the nature of their business relationship [1]. It also includes identifying the beneficial owner of a customer, whether a natural person or a legal person or arrangement, and taking reasonable measures to verify their identity [2?]. The goal of customer due diligence is to prevent the unlawful use of legal persons and arrangements by gaining a sufficient understanding of the customer to assess potential money laundering and terrorist financing risks [2?]."
+    },
+    {
+      "id": "general-pep",
+      "run": 1,
+      "passed": true,
+      "sources": [
+        "fatf-recommendations-2012.pdf"
+      ],
+      "answer": "Financial institutions should be required to have appropriate risk-management systems to determine whether the customer or beneficial owner is a politically exposed person. They should also obtain senior management approval for establishing or continuing a business relationship with a politically exposed person. Additionally, financial institutions should take reasonable measures to establish the source of wealth and source of funds for a politically exposed person. Furthermore, they should conduct enhanced ongoing monitoring of the business relationship with a politically exposed person. Financial institutions should also determine whether a customer or beneficial owner is a domestic PEP or a person who is or has been entrusted with a prominent function by an international organisation. If a higher risk is identified, financial institutions should apply the measures referred to in paragraphs (b), (c), and (d). The requirements for all types of PEPs should also apply to family members or close associates of such PEPs."
+    },
+    {
+      "id": "general-record-keeping",
+      "run": 1,
+      "passed": true,
+      "sources": [
+        "fatf-recommendations-2012.pdf"
+      ],
+      "answer": "Financial institutions should maintain records on transactions, both domestic and international, for at least five years [1] to enable them to comply swiftly with information requests from the competent authorities.\n\nThey should also keep all records obtained through Customer Due Diligence (CDD) measures, such as copies or records of official identification documents, account files, and business correspondence, including the results of any analysis undertaken, for at least five years after the business relationship is ended, or after the date of the occasional transaction [1].\n\nAdditionally, financial institutions should be required by law to maintain records on transactions and information obtained through the CDD measures [1]."
+    },
+    {
+      "id": "general-str",
+      "run": 1,
+      "passed": true,
+      "sources": [
+        "fatf-recommendations-2012.pdf"
+      ],
+      "answer": "Suspicious transactions should be reported to the financial intelligence unit (FIU) [1]. This is a mandatory requirement, as stated in Recommendation 20 [1?]. The FIU serves as the central agency for the receipt of disclosures filed by reporting entities [2?]. In addition, suspicious transactions should be reported to the FIU spontaneously and upon request [2?]."
+    },
+    {
+      "id": "general-tipping-off",
+      "run": 1,
+      "passed": true,
+      "sources": [
+        "fatf-recommendations-2012.pdf"
+      ],
+      "answer": "Staff are prohibited by law from disclosing the fact that a suspicious transaction report (STR) or related information is being filed with the FIU [2]."
+    },
+    {
+      "id": "general-shell-banks",
+      "run": 1,
+      "passed": true,
+      "sources": [
+        "fatf-recommendations-2012.pdf"
+      ],
+      "answer": "Banks should be prohibited from entering into, or continuing, a correspondent banking relationship with shell banks [1]. \n\nThis means that financial institutions should not engage in correspondent banking relationships with institutions that are considered shell banks [1]. \n\nIn other words, financial institutions should not establish or maintain a banking relationship with shell banks [1]."
+    },
+    {
+      "id": "general-occasional-threshold",
+      "run": 1,
+      "passed": true,
+      "sources": [
+        "fatf-recommendations-2012.pdf"
+      ],
+      "answer": "Financial institutions must conduct customer due diligence for occasional transactions above the applicable designated threshold, which is USD/EUR 15,000 [1]."
+    },
+    {
+      "id": "general-wire-threshold",
+      "run": 1,
+      "passed": true,
+      "sources": [
+        "fatf-recommendations-2012.pdf"
+      ],
+      "answer": "The de-minimis threshold for domestic wire transfers is USD/EUR 1 000 [1]. Cross-border wire transfers above the de-minimis threshold must include the name of the originator and beneficiary, and the account number of the originator and beneficiary [2]."
+    },
+    {
+      "id": "general-number-of-recommendations",
+      "run": 1,
+      "passed": true,
+      "sources": [
+        "fatf-recommendations-2012.pdf"
+      ],
+      "answer": "There are 40 Recommendations in the FATF Recommendations [4?].\n\nThe FATF Recommendations are divided into several categories, including AML/CFT policies and coordination, money laundering and confiscation, terrorist financing and financing of proliferation, preventive measures, transparency and beneficial ownership of legal persons and arrangements, powers and responsibilities of competent authorities and other institutional measures, and international cooperation [2].\n\nNote that the number of Recommendations has been updated over time, with some revisions and additions [5?]."
+    },
+    {
+      "id": "general-risk-based-approach",
+      "run": 1,
+      "passed": true,
+      "sources": [
+        "fatf-recommendations-2012.pdf"
+      ],
+      "answer": "The risk-based approach (RBA) is an effective way to combat money laundering and terrorist financing [1]. It involves identifying, assessing, and understanding the money laundering and terrorist financing risks for a country, and taking action to mitigate those risks [1?]. The RBA should be applied to ensure that measures to prevent or mitigate money laundering and terrorist financing are proportionate to the risks identified [3]. This approach should be an essential foundation to efficient allocation of resources across the anti-money laundering and countering the financing of terrorism (AML/CFT) regime [1?]. The RBA allows supervisory authorities to shift resources to those areas that are perceived to present higher risk [2]."
+    },
+    {
+      "id": "general-beneficial-ownership",
+      "run": 1,
+      "passed": true,
+      "sources": [
+        "fatf-recommendations-2012.pdf"
+      ],
+      "answer": "Competent authorities should have access to the full name, nationality(ies), full date and place of birth, residential address, national identification number, and document type, and the tax identification number or equivalent in the country of residence of the natural person(s) who are the beneficial owner(s), and the means and mechanisms through which they exercise beneficial ownership or control [1].\n\nCountries should require companies to obtain and hold adequate, accurate and up-to-date information on the company's own beneficial ownership, to cooperate with competent authorities to the fullest extent possible in determining the beneficial owner, including making the information available to competent authorities in a timely manner.\n\nIn addition, countries should require financial institutions and DNFBPs to provide adequate, accurate and up-to-date information on the company's beneficial ownership information.\n\nThe company registry should record all the basic information set out in paragraph 4(a) above, including the company name, proof of incorporation, legal form and status, the address of the registered office, basic regulating powers, a list of directors, and unique identifier such as a tax identification number or equivalent [4].\n\nThe register of shareholders or members should contain the names of the shareholders and members and number of shares held by each shareholder, and categories of shares [4]."
+    },
+    {
+      "id": "general-correspondent-banking",
+      "run": 1,
+      "passed": true,
+      "sources": [
+        "fatf-recommendations-2012.pdf"
+      ],
+      "answer": "Financial institutions should be required to gather sufficient information about a respondent institution to understand fully the nature of the respondent's business and to determine from publicly available information the reputation of the institution and the quality of supervision, including whether it has been subject to a money laundering or terrorist financing investigation or regulatory action [1]. \n\nThey should also assess the respondent institution's AML/CFT controls [1]. \n\nObtaining approval from senior management before establishing new correspondent relationships is also required [1]. \n\nFinancial institutions should clearly understand the respective responsibilities of each institution [1]. \n\nFor \"payable-through accounts\", they should be satisfied that the respondent bank has conducted CDD on the customers having direct access to accounts of the correspondent bank, and that it is able to provide relevant CDD information upon request to the correspondent bank [1]."
+    },
+    {
+      "id": "finance-number-of-principles",
+      "run": 1,
+      "passed": false,
+      "sources": [],
+      "answer": "I couldn't find this in the policy documents available to your department, so I can't answer it reliably. Please contact the relevant department directly."
+    },
+    {
+      "id": "finance-governance",
+      "run": 1,
+      "passed": true,
+      "sources": [
+        "bcbs239_risk_data.pdf"
+      ],
+      "answer": "A bank's board is responsible for overseeing senior management's ownership of implementing all the risk data aggregation and risk reporting principles. The board should also ensure that adequate resources are deployed to support the bank's risk data aggregation capabilities and risk reporting practices. A bank's board and senior management should promote the identification, assessment, and management of data quality risks as part of its overall risk management framework."
+    },
+    {
+      "id": "finance-accuracy",
+      "run": 1,
+      "passed": true,
+      "sources": [
+        "bcbs239_risk_data.pdf"
+      ],
+      "answer": "A bank should strive towards a single authoritative source for risk data per each type of risk [d]. \n\nRisk data should be reconciled with bank's sources, including accounting data where appropriate, to ensure that the risk data is accurate. \n\nSupervisors expect banks to document and explain all of their risk data aggregation processes whether automated or manual (judgement based or otherwise). \n\nSupervisors expect banks to measure and monitor the accuracy of data and to develop appropriate escalation channels and action plans to be in place to rectify poor data quality."
+    },
+    {
+      "id": "finance-timeliness",
+      "run": 1,
+      "passed": true,
+      "sources": [
+        "bcbs239_risk_data.pdf"
+      ],
+      "answer": "BCBS 239 requires banks to generate aggregate and up-to-date risk data in a timely manner. The precise timing will depend upon the nature and potential volatility of the risk being measured as well as its criticality to the overall risk profile of the bank. The timing will also depend on the bank-specific frequency requirements for risk management reporting, under both normal and stress/crisis situations. In stress/crisis situations, banks need to be able to produce aggregated risk data rapidly. Critical risks, such as aggregated credit exposure to a large corporate borrower, require rapid data production."
+    },
+    {
+      "id": "finance-scope",
+      "run": 1,
+      "passed": true,
+      "sources": [
+        "bcbs239_risk_data.pdf"
+      ],
+      "answer": "The Principles were initially addressed to Systemically Important Banks (SIBs) [1]. These banks were required to apply the Principles by January 2016 [1]. National supervisors were also encouraged to apply the Principles to a wider range of banks, in a way that is proportionate to the size, nature, and complexity of their operations [1]."
+    },
+    {
+      "id": "finance-report-qualities",
+      "run": 1,
+      "passed": true,
+      "sources": [
+        "bcbs239_risk_data.pdf"
+      ],
+      "answer": "Risk management reports should communicate information in a clear and concise manner. They should be easy to understand yet comprehensive enough to facilitate informed decision-making. Reports should include an appropriate balance between risk data, analysis, and interpretation, and qualitative explanations. The balance of qualitative versus quantitative information will vary at different levels within the organisation and will also depend on the level of aggregation that is applied to the reports."
+    },
+    {
+      "id": "ops-three-lines",
+      "run": 1,
+      "passed": true,
+      "sources": [
+        "bcbs_operational_risk.pdf"
+      ],
+      "answer": "The three lines of defence in operational risk are: \n\n1. The first line of defence is the business unit management, responsible for identifying and managing the risks inherent in the products, activities, processes and systems for which it is accountable. \n2. The second line of defence is typically an independent operational risk management function, also known as the Operational Risk Management Function (ORMF), responsible for developing an independent view regarding business units' identified material operational risks. \n3. The third line of defence is independent assurance, which provides independent review and validation of the operational risk management framework, ensuring its effectiveness and robustness."
+    },
+    {
+      "id": "ops-board-role",
+      "run": 1,
+      "passed": true,
+      "sources": [
+        "bcbs_operational_risk.pdf"
+      ],
+      "answer": "The board of directors should approve and periodically review the operational risk management framework [1]. The board of directors should also establish a risk management culture and ensure that the bank has adequate processes for understanding the nature and scope of operational risk [1]. The board of directors is responsible for establishing a strong risk management culture implemented by senior management [1?]. They should also ensure that the operational risk management processes are subject to comprehensive and dynamic oversight and are fully integrated into the overall framework for managing all risks across the enterprise [1]."
+    },
+    {
+      "id": "ops-business-continuity",
+      "run": 1,
+      "passed": true,
+      "sources": [
+        "bcbs_operational_risk.pdf"
+      ],
+      "answer": "The Basel Committee on Banking Supervision emphasizes the importance of business continuity planning [1?]. Banks should have business continuity plans in place to ensure their ability to operate on an ongoing basis and limit losses in the event of a severe business disruption [1]. Business continuity plans should be linked to the bank's operational risk management framework [1]. Regular review and approval by the board of directors is required to ensure sound and effective governance of business continuity plans [1]. The senior management and business units leaders should be involved in the implementation of business continuity plans [1]. The first and second lines of defense should commit to the design of business continuity plans [1]. Regular review by the third line of defense is also recommended [1]."
+    },
+    {
+      "id": "ops-ict-risk",
+      "run": 1,
+      "passed": true,
+      "sources": [
+        "bcbs_operational_risk.pdf"
+      ],
+      "answer": "Banks should implement a robust Information and Communication Technology (ICT) risk management programme in alignment with their operational risk management framework [1]. Effective ICT performance and security are paramount for a bank to conduct its business properly [2?]. The appropriate use and implementation of sound ICT risk management contributes to the effectiveness of the control environment and is fundamental to the achievement of a bank's strategic objectives [2?]. A bank's ICT risk assessment should ensure that its ICT fully supports and facilitates its operations [2?]. ICT risk management should reduce a bank's operational risk exposure to direct losses, legal claims, reputational damage, ICT disruption, and misuse of technology, in alignment with its risk appetite and tolerance statement [1].\n\nICT risk management includes: \n* ICT risk identification and assessment [1]\n* ICT risk mitigation measures consistent with the assessed risk level, such as cybersecurity, response and recovery programmes, ICT change management processes, ICT incident management processes, and relevant information transmission to users on a timely basis [1]\n* Monitoring of these mitigation measures, including regular tests [1]\n\nTo ensure data and systems' confidentiality, integrity, and availability, the board of directors should regularly oversee the effectiveness of the bank's ICT risk management, and senior management should routinely evaluate the design, implementation, and effectiveness of the bank's ICT risk management [1]. This requires regular alignment of the business, risk management, and ICT strategies to be consistent with the bank's risk appetite and tolerance statement as well as with privacy and other applicable laws [1]."
+    },
+    {
+      "id": "ops-change-management",
+      "run": 1,
+      "passed": true,
+      "sources": [
+        "bcbs_operational_risk.pdf"
+      ],
+      "answer": "According to the Basel Committee on Banking Supervision, banks should have policies and procedures defining the process for identifying, managing, challenging, approving and monitoring change on the basis of agreed objective criteria. Change implementation should be monitored by specific oversight controls. The first line of defence should perform operational risk and control assessments of new products, activities, processes and systems, including the identification and evaluation of the required change through the decision-making and planning phases. The second line of defence (CORF) should challenge the operational risk and control assessments of the first line of defence, as well as monitor the implementation of appropriate controls or remediation actions."
+    },
+    {
+      "id": "refuse-dress-code",
+      "run": 1,
+      "passed": true,
+      "sources": [],
+      "answer": "I couldn't find this in the policy documents available to your department, so I can't answer it reliably. Please contact the relevant department directly."
+    },
+    {
+      "id": "refuse-expenses",
+      "run": 1,
+      "passed": true,
+      "sources": [],
+      "answer": "I couldn't find this in the policy documents available to your department, so I can't answer it reliably. Please contact the relevant department directly."
+    },
+    {
+      "id": "refuse-cafeteria",
+      "run": 1,
+      "passed": true,
+      "sources": [],
+      "answer": "I couldn't find this in the policy documents available to your department, so I can't answer it reliably. Please contact the relevant department directly."
+    },
+    {
+      "id": "refuse-vpn",
+      "run": 1,
+      "passed": true,
+      "sources": [],
+      "answer": "I couldn't find this in the policy documents available to your department, so I can't answer it reliably. Please contact the relevant department directly."
+    },
+    {
+      "id": "refuse-parking",
+      "run": 1,
+      "passed": true,
+      "sources": [],
+      "answer": "I couldn't find this in the policy documents available to your department, so I can't answer it reliably. Please contact the relevant department directly."
+    },
+    {
+      "id": "refuse-bonus-date",
+      "run": 1,
+      "passed": true,
+      "sources": [],
+      "answer": "I couldn't find this in the policy documents available to your department, so I can't answer it reliably. Please contact the relevant department directly."
+    },
+    {
+      "id": "security-hr-asks-bcbs239",
+      "run": 1,
+      "passed": true,
+      "sources": [],
+      "answer": "I couldn't find this in the policy documents available to your department, so I can't answer it reliably. Please contact the relevant department directly."
+    },
+    {
+      "id": "security-hr-asks-ops",
+      "run": 1,
+      "passed": true,
+      "sources": [],
+      "answer": "I couldn't find this in the policy documents available to your department, so I can't answer it reliably. Please contact the relevant department directly."
+    },
+    {
+      "id": "security-ops-asks-leave",
+      "run": 1,
+      "passed": true,
+      "sources": [],
+      "answer": "I couldn't find this in the policy documents available to your department, so I can't answer it reliably. Please contact the relevant department directly."
+    },
+    {
+      "id": "security-finance-asks-maternity",
+      "run": 1,
+      "passed": true,
+      "sources": [],
+      "answer": "I couldn't find this in the policy documents available to your department, so I can't answer it reliably. Please contact the relevant department directly."
+    },
+    {
+      "id": "security-finance-asks-ops",
+      "run": 1,
+      "passed": true,
+      "sources": [
+        "bcbs239_risk_data.pdf"
+      ],
+      "answer": "The Basel Committee's Principles for Enhancing Corporate Governance emphasize the importance of effective change management in banks. According to Principle 2, the board of directors should establish, implement, and maintain an adequate governance structure to supervise the implementation of the principles."
+    }
+  ]
+}

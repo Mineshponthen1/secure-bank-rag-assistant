@@ -1,55 +1,353 @@
 # Golden questions for the report card.
-# user:             which account asks (also tests department permissions)
-# expect:           "answer" or "refuse"
-# must_contain_any: a correct answer must include at least one of these (lowercase match)
+#
+# category:          hr | general | finance | operations | refusal | security
+# user:              which test account asks (ABC1 = HR, ABC2 = Finance, ABC3 = Operations)
+# expect:            "answer", "refuse", or "any" (security checks only look at the sources)
+# must_contain_any:  a correct answer must include at least one of these (case-insensitive)
+# forbidden_sources: the test FAILS if any of these documents appears in the sources
+#
+# Answer keys were drafted from the documents and should be human-verified.
+# If a question fails, read the saved answer and check the document before blaming the system.
 
+# ---------------- HR: UAE Labour Law (asked by HR) ----------------
 - id: hr-annual-leave
+  category: hr
   user: ABC1
   question: How many days of annual leave is a worker entitled to?
   expect: answer
   must_contain_any: ["30", "thirty"]
 
 - id: hr-maternity-leave
+  category: hr
   user: ABC1
   question: How long is maternity leave for a female worker?
   expect: answer
   must_contain_any: ["60", "sixty"]
 
 - id: hr-probation
+  category: hr
   user: ABC1
   question: What is the maximum length of a probation period?
   expect: answer
-  must_contain_any: ["6 months", "six months", "six (6) months"]
+  must_contain_any: ["6 months", "six months", "six (6) months", "(6) months"]
 
+- id: hr-notice-period
+  category: hr
+  user: ABC1
+  question: What is the minimum notice period for terminating an employment contract?
+  expect: answer
+  must_contain_any: ["30", "thirty"]
+
+- id: hr-sick-leave
+  category: hr
+  user: ABC1
+  question: How many days of sick leave can a worker take per year?
+  expect: answer
+  must_contain_any: ["90", "ninety"]
+
+- id: hr-parental-leave
+  category: hr
+  user: ABC1
+  question: How many days of parental leave does a worker get?
+  expect: answer
+  must_contain_any: ["5", "five"]
+
+- id: hr-bereavement-spouse
+  category: hr
+  user: ABC1
+  question: How many days of bereavement leave are given for the death of a spouse?
+  expect: answer
+  must_contain_any: ["5", "five"]
+
+- id: hr-working-hours
+  category: hr
+  user: ABC1
+  question: What is the maximum number of normal working hours per day?
+  expect: answer
+  must_contain_any: ["8", "eight"]
+
+- id: hr-overtime-limit
+  category: hr
+  user: ABC1
+  question: What is the maximum overtime a worker can work per day?
+  expect: answer
+  must_contain_any: ["2 hours", "two hours", "(2) hours"]
+
+- id: hr-overtime-pay
+  category: hr
+  user: ABC1
+  question: How much extra is paid for overtime work?
+  expect: answer
+  must_contain_any: ["25"]
+
+- id: hr-gratuity
+  category: hr
+  user: ABC1
+  question: How is end-of-service gratuity calculated for the first five years of service?
+  expect: answer
+  must_contain_any: ["21", "twenty-one", "twenty one"]
+
+- id: hr-minimum-age
+  category: hr
+  user: ABC1
+  question: What is the minimum age for employing a juvenile?
+  expect: answer
+  must_contain_any: ["15", "fifteen"]
+
+- id: hr-study-leave
+  category: hr
+  user: ABC1
+  question: How many days of study leave can a worker get?
+  expect: answer
+  must_contain_any: ["10", "ten"]
+
+- id: hr-weekly-rest
+  category: hr
+  user: ABC1
+  question: How many days of weekly rest is a worker entitled to?
+  expect: answer
+  must_contain_any: ["one day", "1 day", "one paid", "one (1)"]
+
+- id: hr-carry-forward
+  category: hr
+  user: ABC1
+  question: Can a worker carry forward unused annual leave to the next year?
+  expect: answer
+  must_contain_any: ["carry forward", "following year", "next year"]
+
+# ---------------- General: FATF Recommendations (readable by all departments) ----------------
 - id: general-cdd
+  category: general
   user: ABC1
   question: What does customer due diligence involve?
   expect: answer
   must_contain_any: ["identif", "verif"]
 
 - id: general-pep
+  category: general
   user: ABC1
   question: What measures apply to politically exposed persons?
   expect: answer
   must_contain_any: ["senior management", "source of wealth", "source of funds"]
 
+- id: general-record-keeping
+  category: general
+  user: ABC2
+  question: For how long must financial institutions keep transaction records?
+  expect: answer
+  must_contain_any: ["5 years", "five years", "five (5) years"]
+
+- id: general-str
+  category: general
+  user: ABC2
+  question: Where should suspicious transactions be reported?
+  expect: answer
+  must_contain_any: ["financial intelligence unit", "fiu"]
+
+- id: general-tipping-off
+  category: general
+  user: ABC3
+  question: Are staff allowed to tell a customer that a suspicious transaction report was filed?
+  expect: answer
+  must_contain_any: ["tipping", "prohibit"]
+
+- id: general-shell-banks
+  category: general
+  user: ABC2
+  question: Can banks have correspondent relationships with shell banks?
+  expect: answer
+  must_contain_any: ["prohibit", "not permitted", "should not", "must not", "not be permitted"]
+
+- id: general-occasional-threshold
+  category: general
+  user: ABC2
+  question: Above what amount must customer due diligence be done for occasional transactions?
+  expect: answer
+  must_contain_any: ["15,000", "15 000", "15000"]
+
+- id: general-wire-threshold
+  category: general
+  user: ABC2
+  question: What is the threshold for wire transfer information requirements?
+  expect: answer
+  must_contain_any: ["1,000", "1 000", "1000"]
+
+- id: general-number-of-recommendations
+  category: general
+  user: ABC3
+  question: How many FATF Recommendations are there?
+  expect: answer
+  must_contain_any: ["40", "forty"]
+
+- id: general-risk-based-approach
+  category: general
+  user: ABC3
+  question: What is the risk-based approach?
+  expect: answer
+  must_contain_any: ["assess", "commensurate", "proportion"]
+
+- id: general-beneficial-ownership
+  category: general
+  user: ABC2
+  question: What information about beneficial ownership should be available to authorities?
+  expect: answer
+  must_contain_any: ["accurate", "up-to-date", "up to date", "timely"]
+
+- id: general-correspondent-banking
+  category: general
+  user: ABC2
+  question: What measures apply to cross-border correspondent banking?
+  expect: answer
+  must_contain_any: ["senior management", "sufficient information", "reputation"]
+
+# ---------------- Finance: BCBS 239 (asked by Finance) ----------------
+- id: finance-number-of-principles
+  category: finance
+  user: ABC2
+  question: How many principles does BCBS 239 contain?
+  expect: answer
+  must_contain_any: ["14", "fourteen"]
+
+- id: finance-governance
+  category: finance
+  user: ABC2
+  question: Who is responsible for governance of a bank's risk data aggregation?
+  expect: answer
+  must_contain_any: ["board", "senior management"]
+
+- id: finance-accuracy
+  category: finance
+  user: ABC2
+  question: What does BCBS 239 require about the accuracy of risk data?
+  expect: answer
+  must_contain_any: ["reconcil", "automat", "error"]
+
+- id: finance-timeliness
+  category: finance
+  user: ABC2
+  question: What does BCBS 239 say about the timeliness of risk data?
+  expect: answer
+  must_contain_any: ["stress", "crisis"]
+
+- id: finance-scope
+  category: finance
+  user: ABC2
+  question: Which banks were the risk data aggregation principles initially intended for?
+  expect: answer
+  must_contain_any: ["g-sib", "systemically important"]
+
+- id: finance-report-qualities
+  category: finance
+  user: ABC2
+  question: What qualities should risk management reports have?
+  expect: answer
+  must_contain_any: ["accura", "comprehensive", "clar", "useful"]
+
+# ---------------- Operations: Basel operational risk principles (asked by Operations) ----------------
 - id: ops-three-lines
+  category: operations
   user: ABC3
   question: What are the three lines of defence in operational risk?
   expect: answer
-  must_contain_any: ["audit"]
+  must_contain_any: ["audit", "assurance"]
 
+- id: ops-board-role
+  category: operations
+  user: ABC3
+  question: What is the board's role in operational risk management?
+  expect: answer
+  must_contain_any: ["approv", "oversee", "oversight", "review"]
+
+- id: ops-business-continuity
+  category: operations
+  user: ABC3
+  question: What does the Basel Committee say about business continuity?
+  expect: answer
+  must_contain_any: ["disruption", "resilien", "recover"]
+
+- id: ops-ict-risk
+  category: operations
+  user: ABC3
+  question: How should banks manage information and communication technology risk?
+  expect: answer
+  must_contain_any: ["cyber", "security", "resilien"]
+
+- id: ops-change-management
+  category: operations
+  user: ABC3
+  question: What does the Basel Committee say about change management?
+  expect: answer
+  must_contain_any: ["new product", "approval", "assess"]
+
+# ---------------- Refusals: bank-sounding questions the documents don't cover ----------------
 - id: refuse-dress-code
+  category: refusal
   user: ABC1
   question: What is the office dress code?
   expect: refuse
 
 - id: refuse-expenses
+  category: refusal
   user: ABC1
   question: What is the approval limit for expenses?
   expect: refuse
 
-- id: refuse-rbac-hr-asks-ops
+- id: refuse-cafeteria
+  category: refusal
+  user: ABC1
+  question: What time does the staff cafeteria open?
+  expect: refuse
+
+- id: refuse-vpn
+  category: refusal
+  user: ABC3
+  question: How do I reset my VPN password?
+  expect: refuse
+
+- id: refuse-parking
+  category: refusal
+  user: ABC2
+  question: Where can employees park their cars at head office?
+  expect: refuse
+
+- id: refuse-bonus-date
+  category: refusal
+  user: ABC2
+  question: When are annual bonuses paid this year?
+  expect: refuse
+
+# ---------------- Security: users must never receive documents outside their department ----------------
+- id: security-hr-asks-bcbs239
+  category: security
+  user: ABC1
+  question: How many principles does BCBS 239 contain?
+  expect: any
+  forbidden_sources: ["bcbs239_risk_data.pdf", "bcbs_operational_risk.pdf"]
+
+- id: security-hr-asks-ops
+  category: security
   user: ABC1
   question: What are the three lines of defence in operational risk?
-  expect: refuse
+  expect: any
+  forbidden_sources: ["bcbs_operational_risk.pdf", "bcbs239_risk_data.pdf"]
+
+- id: security-ops-asks-leave
+  category: security
+  user: ABC3
+  question: How many days of annual leave is a worker entitled to?
+  expect: any
+  forbidden_sources: ["uae_labour_law.pdf", "bcbs239_risk_data.pdf"]
+
+- id: security-finance-asks-maternity
+  category: security
+  user: ABC2
+  question: How long is maternity leave for a female worker?
+  expect: any
+  forbidden_sources: ["uae_labour_law.pdf", "bcbs_operational_risk.pdf"]
+
+- id: security-finance-asks-ops
+  category: security
+  user: ABC2
+  question: What does the Basel Committee say about change management?
+  expect: any
+  forbidden_sources: ["bcbs_operational_risk.pdf", "uae_labour_law.pdf"]
