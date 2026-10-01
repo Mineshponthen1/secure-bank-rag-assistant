@@ -1,17 +1,18 @@
 import os
 import re
-import yaml
+import time
 import sqlite3
 import bcrypt
 import jwt
 import secrets
+import yaml
+import cohere
+from dotenv import load_dotenv
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 import uvicorn
 import datetime
-import pypdf
 import weaviate
-from weaviate.classes.config import Configure, DataType, Property
-from weaviate.classes.query import Filter, MetadataQuery
+from weaviate.classes.query import Filter
 import ollama
 from fastapi import FastAPI, HTTPException, Depends
 from pydantic import BaseModel
@@ -39,8 +40,15 @@ app.add_middleware(
 client = weaviate.connect_to_local(host="localhost", port=8080)
 COLLECTION_NAME = "BankKnowledge"
 EMBEDDING_MODEL = "nomic-embed-text"
-MAX_DISTANCE = 0.41  # re-measured on real documents: relevant ≤0.397, near-misses ≥0.419 (see measure_distances.py)
 DB_FILE = "users_approval.db"
+
+# Retrieval settings
+load_dotenv()                      # reads COHERE_API_KEY from .env
+co = cohere.ClientV2(api_key=os.getenv("COHERE_API_KEY"))
+RERANK_MODEL = "rerank-v4.0-pro"
+CANDIDATES = 20                    # hybrid search builds a long list...
+TOP_K = 5                          # ...the re-ranker keeps the best few
+MIN_RELEVANCE = 0.75               # measured: relevant >= 0.805, irrelevant <= 0.675 (see measure_rerank.py)
 
 # Load the answer prompt from its versioned config file
 PROMPT_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "prompts", "rag_answer.yaml")
@@ -205,6 +213,19 @@ def verify_citations(answer_text: str, results: list) -> str:
             tidy = tidy.replace(claim, new_claim, 1)
 
     return tidy
+
+
+def rerank_with_retry(query: str, documents: list, attempts: int = 3):
+    """Ask Cohere to re-rank. If the trial rate limit is hit, wait and try again."""
+    for attempt in range(1, attempts + 1):
+        try:
+            return co.rerank(model=RERANK_MODEL, query=query, documents=documents, top_n=TOP_K).results
+        except cohere.errors.TooManyRequestsError:
+            if attempt == attempts:
+                raise HTTPException(status_code=503, detail="The search service is busy. Please try again in a minute.")
+            print(f"[rerank] rate limited, waiting 15s (attempt {attempt}/{attempts})")
+            time.sleep(15)
+    return []
 
 
 # ==========================================
@@ -424,27 +445,31 @@ def secure_rag_query(data: QueryRequest, user: dict = Depends(get_current_user))
     vector = ollama.embeddings(model=EMBEDDING_MODEL, prompt=data.query)["embedding"]
     collection = client.collections.get(COLLECTION_NAME)
 
-    response = collection.query.near_vector(
-        near_vector=vector,
-        filters=rbac_filter,
-        limit=5,
-        return_metadata=MetadataQuery(distance=True)
-    )
+    # Step 1: hybrid search (meaning + keywords) builds a long list, respecting department permissions
+    candidates = collection.query.hybrid(
+        query=data.query, vector=vector, alpha=0.5,
+        filters=rbac_filter, limit=CANDIDATES
+    ).objects
 
     retrieved_contexts = []
     results = []
     print(f"\n[retrieval] Question: {data.query}")
-    for obj in response.objects:
+
+    # Step 2: the re-ranker reads the question with each candidate and keeps the best
+    reranked = rerank_with_retry(data.query, [str(o.properties["content"]) for o in candidates]) if candidates else []
+    for r in reranked:
+        obj = candidates[r.index]
         content = obj.properties.get("content")
         source_file = obj.properties.get("source_file")
         page_number = obj.properties.get("page_number")
         allowed_depts = obj.properties.get("allowed_departments")
-        distance = obj.metadata.distance if obj.metadata.distance is not None else 1.0
+        relevance = r.relevance_score
+        
 
-        if distance > MAX_DISTANCE:
-            print(f"[retrieval]   DROPPED {source_file} p.{page_number}  distance={distance:.3f}")
+        if relevance < MIN_RELEVANCE:
+            print(f"[retrieval]   DROPPED {source_file} p.{page_number}  relevance={relevance:.3f}")
             continue
-        print(f"[retrieval]   KEPT    {source_file} p.{page_number}  distance={distance:.3f}")
+        print(f"[retrieval]   KEPT    {source_file} p.{page_number}  relevance={relevance:.3f}")
 
         # Give each kept source a number, like a footnote
         ref = len(results) + 1
@@ -455,7 +480,8 @@ def secure_rag_query(data: QueryRequest, user: dict = Depends(get_current_user))
             "source_file": source_file,
             "page_number": page_number,
             "allowed_departments": allowed_depts,
-            "distance": round(distance, 3)
+            "relevance": round(relevance, 3)
+            
         })
 
     # Refuse by code (not by hoping the AI notices) when no chunk is relevant enough
@@ -463,13 +489,12 @@ def secure_rag_query(data: QueryRequest, user: dict = Depends(get_current_user))
         return {
             "user": username,
             "department": department,
-            "answer": "I couldn't find this in the policy documents available to your department, so I can't answer it reliably. Please contact the relevant department directly.",
+            "answer": PROMPT["refusal"],
             "results": []
         }
 
     # Combine the numbered sources for the LLM
     context_str = "\n\n".join(retrieved_contexts)
-
     system_prompt = PROMPT["system"].format(department=department, sources=context_str)
 
     try:
@@ -496,7 +521,7 @@ def secure_rag_query(data: QueryRequest, user: dict = Depends(get_current_user))
 
     print(f"[citations] cited={sorted(cited_refs & valid_refs)}  invalid_removed={sorted(invalid_refs)}")
 
-        # Verify each citation in code: highlight verified passages, mark unverified ones as [n?]
+    # Verify each citation in code: highlight verified passages, mark unverified ones as [n?]
     answer_text = verify_citations(answer_text, results)
 
     return {
