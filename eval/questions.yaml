@@ -45,6 +45,13 @@
   expect: answer
   must_contain_any: ["90", "ninety"]
 
+- id: hr-sick-full-pay
+  category: hr
+  user: ABC1
+  question: How many days of sick leave are paid at full pay?
+  expect: answer
+  must_contain_any: ["15", "fifteen"]
+
 - id: hr-parental-leave
   category: hr
   user: ABC1

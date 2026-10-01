@@ -6,3 +6,4 @@ pypdf
 bcrypt
 PyJWT
 pyyaml
+pytest
