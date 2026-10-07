@@ -20,7 +20,7 @@ def post(path, payload, token=None):
     if token:
         headers["Authorization"] = f"Bearer {token}"
     req = urllib.request.Request(BASE_URL + path, data=json.dumps(payload).encode(), headers=headers)
-    with urllib.request.urlopen(req, timeout=300) as r:
+    with urllib.request.urlopen(req, timeout=600) as r:
         return json.loads(r.read())
 
 
@@ -37,9 +37,12 @@ def was_refused(resp):
 def main():
     parser = argparse.ArgumentParser(description="Run the golden-question report card.")
     parser.add_argument("--runs", type=int, default=1, help="how many times to ask each question (default 1)")
+    parser.add_argument("--limit", type=int, help="only ask the first N questions (quick test, saved to eval/quick_runs)")
     args = parser.parse_args()
 
     questions = yaml.safe_load((HERE / "questions.yaml").read_text(encoding="utf-8"))
+    if args.limit:
+        questions = questions[:args.limit]
     tokens = {u: login(u) for u in sorted({q["user"] for q in questions})}
 
     t = {"answer_total": 0, "correct": 0, "has_cites": 0, "verified": 0, "unverified": 0,
@@ -59,11 +62,12 @@ def main():
             time.sleep(PAUSE)
             try:
                 resp = post("/api/query", {"query": q["question"]}, tokens[q["user"]])
-            except urllib.error.HTTPError as e:
+            except (urllib.error.URLError, TimeoutError) as e:
                 t["errors"] += 1
                 by_category[cat][1] += 1
-                print(f"{q['id']:34} run {run}  ✗ ERROR {e.code} (server said: {e.reason})")
-                log.append({"id": q["id"], "run": run, "error": e.code})
+                reason = getattr(e, "code", type(e).__name__)
+                print(f"{q['id']:34} run {run}  ✗ ERROR {reason}")
+                log.append({"id": q["id"], "run": run, "error": str(reason)})
                 continue
 
             answer = resp["answer"]
@@ -96,7 +100,10 @@ def main():
             by_category[cat][0] += passed
             by_category[cat][1] += 1
             print(f"{q['id']:34} run {run}  {line}")
-            log.append({"id": q["id"], "run": run, "passed": passed, "sources": sources, "answer": answer})
+            log.append({"id": q["id"], "run": run, "category": cat, "expect": q.get("expect"),
+                        "question": q["question"], "passed": passed, "sources": sources,
+                        "answer": answer,
+                        "contexts": [r["content"] for r in resp["results"]]})
 
     cited_total = t["verified"] + t["unverified"]
     print("\n================ REPORT CARD ================")
@@ -113,13 +120,13 @@ def main():
         print(f"  {cat:12} {passed:3} of {total}")
     print("=============================================")
 
-    out = HERE / "results"
+    out = HERE / ("quick_runs" if args.limit else "results")
     out.mkdir(exist_ok=True)
     stamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M")
     (out / f"{stamp}.json").write_text(
         json.dumps({"runs": args.runs, "totals": t, "by_category": by_category, "answers": log}, indent=2),
         encoding="utf-8")
-    print(f"Saved full answers to eval/results/{stamp}.json")
+    print(f"Saved full answers to eval/{out.name}/{stamp}.json")
 
 
 if __name__ == "__main__":

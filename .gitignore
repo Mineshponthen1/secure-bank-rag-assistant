@@ -5,4 +5,4 @@ __pycache__/
 chroma_storage/
 .env
 frontend/
-documents/
+documents/eval/quick_runs/
