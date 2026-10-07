@@ -21,6 +21,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from citations import verify_citations, remove_invalid_refs
+import re
+from langfuse import get_client, observe, propagate_attributes
 
 app = FastAPI(title="Secure Enterprise RAG Bank Assistant")
 
@@ -58,6 +60,7 @@ PROMPT_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "prompts"
 with open(PROMPT_FILE, encoding="utf-8") as f:
     PROMPT = yaml.safe_load(f)
 print(f"[prompt] loaded rag_answer v{PROMPT['version']} (model: {PROMPT['model']})")
+lf = get_client()   # Langfuse messenger: sends every trace to the self-hosted Langfuse (keys in .env)
 
 
 def hash_password(password: str) -> str:
@@ -110,14 +113,23 @@ def require_admin(user: dict = Depends(get_current_user)) -> dict:
     return user
 
 
+@observe(name="rerank", capture_input=False, capture_output=False)
 def rerank_with_retry(query: str, documents: list, attempts: int = 3):
     """Ask Cohere to re-rank. If the trial rate limit is hit, wait and try again."""
     for attempt in range(1, attempts + 1):
         try:
-            return co.rerank(model=RERANK_MODEL, query=query, documents=documents, top_n=TOP_K).results
+            results = co.rerank(model=RERANK_MODEL, query=query, documents=documents, top_n=TOP_K).results
+            lf.update_current_span(
+                input={"query": query, "candidates": len(documents)},
+                output=[{"index": r.index, "score": round(r.relevance_score, 3)} for r in results],
+                metadata={"rerank_model": RERANK_MODEL, "attempts": attempt},
+            )
+            return results
         except cohere.errors.TooManyRequestsError:
             if attempt == attempts:
+                lf.update_current_span(level="ERROR", status_message="Cohere rate limit: gave up after retries")
                 raise HTTPException(status_code=503, detail="The search service is busy. Please try again in a minute.")
+            lf.update_current_span(level="WARNING", status_message=f"Cohere rate limited (attempt {attempt}/{attempts})")
             print(f"[rerank] rate limited, waiting 15s (attempt {attempt}/{attempts})")
             time.sleep(15)
     return []
@@ -315,6 +327,7 @@ def greeting_text() -> str:
             f"How can I help you navigate our compliance and department guidelines today?")
 
 
+@observe(name="retrieval", as_type="retriever", capture_input=False, capture_output=False)
 def retrieve(query: str, department: str, is_admin: bool):
     """Hybrid search + re-ranking, respecting department permissions.
     Returns (numbered contexts for the AI, source details for the page)."""
@@ -363,6 +376,14 @@ def retrieve(query: str, department: str, is_admin: bool):
             "relevance": round(relevance, 3)
         })
 
+    # Record what retrieval found (page numbers and scores, not the full texts)
+    lf.update_current_span(
+        input={"query": query, "department": department, "is_admin": is_admin},
+        output=[{"ref": r["ref"], "source": r["source_file"], "page": r["page_number"],
+                 "relevance": r["relevance"]} for r in results],
+        metadata={"candidates": len(candidates), "kept": len(results),
+                  "dropped": len(reranked) - len(results), "min_relevance": MIN_RELEVANCE},
+    )
     return retrieved_contexts, results
 
 
@@ -388,24 +409,66 @@ def finalize(answer_text: str, results: list) -> str:
 def secure_rag_query(data: QueryRequest, user: dict = Depends(get_current_user)):
     """Classic endpoint: returns the whole answer at once (used by the report card)."""
     username, department, is_admin = user["username"], user["department"], user["is_admin"]
+    # Labels for the whole trace: who asked, from which department, with which prompt version
+    with propagate_attributes(user_id=username, trace_name="rag-query",
+                              tags=["api/query", f"prompt-v{PROMPT['version']}"],
+                              metadata={"department": department},
+                              version=str(PROMPT["version"])):
+        return answer_query(data.query, username, department, is_admin)
 
-    if data.query.strip().lower() in GREETINGS:
-        return {"user": username, "department": department, "answer": greeting_text(), "results": []}
 
-    retrieved_contexts, results = retrieve(data.query, department, is_admin)
+@observe(name="rag-query", capture_input=False, capture_output=False)
+def answer_query(query: str, username: str, department: str, is_admin: bool):
+    lf.update_current_span(input={"query": query})
+
+    if query.strip().lower() in GREETINGS:
+        answer = greeting_text()
+        lf.update_current_span(output={"answer": answer}, metadata={"outcome": "greeting"})
+        return {"user": username, "department": department, "answer": answer, "results": []}
+
+    retrieved_contexts, results = retrieve(query, department, is_admin)
 
     # Refuse by code (not by hoping the AI notices) when no chunk is relevant enough
     if not retrieved_contexts:
+        lf.update_current_span(output={"answer": PROMPT["refusal"]}, metadata={"outcome": "refused"})
         return {"user": username, "department": department, "answer": PROMPT["refusal"], "results": []}
 
     try:
-        ollama_res = ollama.chat(model=PROMPT["model"], messages=build_messages(data.query, department, retrieved_contexts))
-        answer_text = ollama_res['message']['content']
+        answer_text = generate_answer(query, department, retrieved_contexts)
     except Exception as e:
         answer_text = f"Error generating response from local LLM model: {str(e)}"
+        lf.update_current_span(level="ERROR", status_message=str(e)[:200])
 
-    answer_text = finalize(answer_text, results)
+    answer_text = check_citations(answer_text, results)
+    lf.update_current_span(output={"answer": answer_text},
+                           metadata={"outcome": "answered", "sources": len(results)})
     return {"user": username, "department": department, "answer": answer_text, "results": results}
+
+
+@observe(name="llm-answer", as_type="generation", capture_input=False, capture_output=False)
+def generate_answer(query: str, department: str, retrieved_contexts: list) -> str:
+    messages = build_messages(query, department, retrieved_contexts)
+    res = ollama.chat(model=PROMPT["model"], messages=messages)
+    text = res["message"]["content"]
+    lf.update_current_generation(
+        model=PROMPT["model"],
+        input=messages,
+        output=text,
+        usage_details={"input": res["prompt_eval_count"] or 0, "output": res["eval_count"] or 0},
+        metadata={"prompt_name": "rag_answer", "prompt_version": PROMPT["version"]},
+        version=str(PROMPT["version"]),
+    )
+    return text
+
+
+@observe(name="citation-check", capture_input=False, capture_output=False)
+def check_citations(answer_text: str, results: list) -> str:
+    final = finalize(answer_text, results)
+    cites = re.findall(r"\[(\d+)(\?)?\]", final)
+    verified = sum(1 for _, flag in cites if not flag)
+    lf.update_current_span(output={"citations": len(cites), "verified": verified,
+                                   "unverified": len(cites) - verified})
+    return final
 
 
 @app.post("/api/query/stream")
