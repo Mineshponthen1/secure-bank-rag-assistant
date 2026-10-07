@@ -405,6 +405,21 @@ def finalize(answer_text: str, results: list) -> str:
     return verify_citations(answer_text, results)
 
 
+def citation_counts(text: str) -> dict:
+    """Count citations in a final answer: [n] is verified, [n?] is unverified."""
+    cites = re.findall(r"\[(\d+)(\?)?\]", text)
+    verified = sum(1 for _, flag in cites if not flag)
+    return {"citations": len(cites), "verified": verified, "unverified": len(cites) - verified}
+
+
+def trace_safely(action, **fields):
+    """Monitoring must never break the product: if a tracing call fails, print why and carry on."""
+    try:
+        return action(**fields)
+    except Exception as e:
+        print(f"[tracing] skipped {getattr(action, '__name__', 'call')}: {e}")
+
+
 @app.post("/api/query")
 def secure_rag_query(data: QueryRequest, user: dict = Depends(get_current_user)):
     """Classic endpoint: returns the whole answer at once (used by the report card)."""
@@ -464,10 +479,7 @@ def generate_answer(query: str, department: str, retrieved_contexts: list) -> st
 @observe(name="citation-check", capture_input=False, capture_output=False)
 def check_citations(answer_text: str, results: list) -> str:
     final = finalize(answer_text, results)
-    cites = re.findall(r"\[(\d+)(\?)?\]", final)
-    verified = sum(1 for _, flag in cites if not flag)
-    lf.update_current_span(output={"citations": len(cites), "verified": verified,
-                                   "unverified": len(cites) - verified})
+    lf.update_current_span(output=citation_counts(final))
     return final
 
 
@@ -477,42 +489,81 @@ def secure_rag_query_stream(data: QueryRequest, user: dict = Depends(get_current
     {"type": "token", "text": "..."}                      while the AI is writing
     {"type": "final", "answer": "...", "results": [...]}  at the end, with verified citations
     {"type": "error", "detail": "..."}                    if something goes wrong"""
-    department, is_admin = user["department"], user["is_admin"]
+    username, department, is_admin = user["username"], user["department"], user["is_admin"]
 
     def send(event: dict) -> str:
         return json.dumps(event) + "\n"
 
     def events():
-        if data.query.strip().lower() in GREETINGS:
-            yield send({"type": "final", "answer": greeting_text(), "results": []})
-            return
+        # While streaming, the web server hands the work between threads, so Langfuse's automatic
+        # "current step" tracking can lose its place. Here the steps are created by hand and
+        # attached to `root` directly, so the trace stays in one piece.
+        with propagate_attributes(user_id=username, trace_name="rag-query",
+                                  tags=["api/query/stream", f"prompt-v{PROMPT['version']}"],
+                                  metadata={"department": department},
+                                  version=str(PROMPT["version"])):
+            root = lf.start_observation(name="rag-query")
+        trace_safely(root.update, input={"query": data.query})
 
         try:
-            retrieved_contexts, results = retrieve(data.query, department, is_admin)
-        except HTTPException as e:
-            yield send({"type": "error", "detail": e.detail})
-            return
+            if data.query.strip().lower() in GREETINGS:
+                answer = greeting_text()
+                trace_safely(root.update, output={"answer": answer}, metadata={"outcome": "greeting"})
+                yield send({"type": "final", "answer": answer, "results": []})
+                return
 
-        # Refuse by code (not by hoping the AI notices) when no chunk is relevant enough
-        if not retrieved_contexts:
-            yield send({"type": "final", "answer": PROMPT["refusal"], "results": []})
-            return
+            # Search happens before the first piece is sent, so the automatic labels still work here
+            try:
+                with root.start_as_current_observation(name="search", as_type="span"):
+                    retrieved_contexts, results = retrieve(data.query, department, is_admin)
+            except HTTPException as e:
+                trace_safely(root.update, level="ERROR", status_message=str(e.detail))
+                yield send({"type": "error", "detail": e.detail})
+                return
 
-        answer_text = ""
-        try:
-            stream = ollama.chat(model=PROMPT["model"],
-                                 messages=build_messages(data.query, department, retrieved_contexts),
-                                 stream=True)
-            for part in stream:
-                piece = part["message"]["content"]
-                answer_text += piece
-                yield send({"type": "token", "text": piece})
-        except Exception as e:
-            yield send({"type": "error", "detail": f"Error generating response from local LLM model: {e}"})
-            return
+            # Refuse by code (not by hoping the AI notices) when no chunk is relevant enough
+            if not retrieved_contexts:
+                trace_safely(root.update, output={"answer": PROMPT["refusal"]}, metadata={"outcome": "refused"})
+                yield send({"type": "final", "answer": PROMPT["refusal"], "results": []})
+                return
 
-        # The answer is complete: now check and verify the citations, then send the final version
-        yield send({"type": "final", "answer": finalize(answer_text, results), "results": results})
+            messages = build_messages(data.query, department, retrieved_contexts)
+            gen = root.start_observation(name="llm-answer", as_type="generation")
+            answer_text, first_token_at, last_part = "", None, None
+            try:
+                for part in ollama.chat(model=PROMPT["model"], messages=messages, stream=True):
+                    piece = part["message"]["content"]
+                    if piece and first_token_at is None:
+                        first_token_at = datetime.datetime.now(datetime.timezone.utc)   # time to first token
+                    answer_text += piece
+                    last_part = part
+                    yield send({"type": "token", "text": piece})
+            except Exception as e:
+                trace_safely(gen.update, level="ERROR", status_message=str(e)[:200])
+                trace_safely(root.update, level="ERROR", status_message="LLM call failed")
+                yield send({"type": "error", "detail": f"Error generating response from local LLM model: {e}"})
+                return
+            finally:
+                usage = None
+                if last_part is not None and last_part["done"]:
+                    usage = {"input": last_part["prompt_eval_count"] or 0, "output": last_part["eval_count"] or 0}
+                trace_safely(gen.update, model=PROMPT["model"], input=messages, output=answer_text,
+                             usage_details=usage, completion_start_time=first_token_at,
+                             metadata={"prompt_name": "rag_answer", "prompt_version": PROMPT["version"]},
+                             version=str(PROMPT["version"]))
+                trace_safely(gen.end)
+
+            # The answer is complete: now check and verify the citations, then send the final version
+            cit = root.start_observation(name="citation-check", as_type="span")
+            final = finalize(answer_text, results)
+            trace_safely(cit.update, output=citation_counts(final))
+            trace_safely(cit.end)
+
+            trace_safely(root.update, output={"answer": final},
+                         metadata={"outcome": "answered", "sources": len(results)})
+            yield send({"type": "final", "answer": final, "results": results})
+        finally:
+            trace_safely(root.end)
 
     return StreamingResponse(events(), media_type="application/x-ndjson")
 
@@ -525,3 +576,7 @@ app.mount("/", StaticFiles(directory=os.path.join(BASE_DIR, "static"), html=True
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)
+
+
+
+
