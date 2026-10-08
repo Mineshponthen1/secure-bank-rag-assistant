@@ -237,4 +237,57 @@ Then start the app as usual (`python app.py`). Every question appears in Langfus
 
 ### Phase 3: Regression gating
 
-*Coming next: if a new prompt increases token cost or decreases citation accuracy, it is flagged and CI fails.*
+The 50-question golden dataset from Project 1 is now a **permanent gate**: if a change makes the assistant **more expensive** or **worse at citing its sources**, it is flagged in Langfuse and **CI fails**.
+
+```
+eval/questions.yaml ──build_tests.py──► regression/tests.yaml ──promptfoo──► regression/results/latest.json
+ (one source of truth)                   (50 promptfoo tests)                          │
+                                                                                       ▼
+                                   regression/baseline.json ◄──compare──  check_regression.py
+                                                                  │
+                                       ┌──────────────────────────┴──────────────────────────┐
+                               flagged in Langfuse                                fails CI (GitHub Actions)
+                           ("regression-check" trace, ERROR)               (tests/test_regression_gate.py)
+```
+
+- **promptfoo** runs the golden questions against the live API through a small Python provider (`regression/provider.py`). It logs in as the right test user for each question, so department permissions are tested exactly as real users experience them, and it returns each answer with its **token usage**, **estimated cost**, and **citation counts**.
+- **Tests are generated, not copied:** `regression/build_tests.py` turns `eval/questions.yaml` into promptfoo tests, so there is one source of truth. Checks: the key facts for normal questions, the refusal wording for out-of-scope questions, and **no forbidden sources** for permission questions. The permission check **fails safely**: if it cannot see the sources, the test fails rather than passing silently.
+- **Prompts are versioned with the code** (`prompts/rag_answer.yaml`); every run and baseline records the prompt version.
+
+#### Baseline (prompt v3, approved 8 October 2026)
+
+| Measure | Baseline |
+|---|---|
+| Golden tests passed | **49 / 50** |
+| Citation accuracy (verified / all citations, answered questions) | **76.5%** |
+| Tokens per answered question | **2,332** |
+| Estimated cost per answered question | **$0.0000242** |
+| Permission failures | **0** |
+
+The one failing test (`finance-number-of-principles`) is a **false refusal**: the fact is in BCBS 239, but no retrieved page cleared the 0.75 relevance bar, so the assistant declined. That is the safe failure mode (no wrong answer), and it is recorded as known in the baseline.
+
+#### Gate rules
+
+| Rule | Fails when |
+|---|---|
+| **Token cost** (roadmap) | Cost per answered question rises more than **10%** |
+| **Citation accuracy** (roadmap) | Verified-citation rate drops more than **5 percentage points** |
+| **Permissions** | Any permission test leaks a forbidden document |
+| **Overall quality** | Fewer than **90%** of golden tests pass |
+
+The tolerances exist because the model's answers vary slightly between runs; without them, the gate would fail on normal run-to-run wobble.
+
+#### How a prompt change goes through the gate
+
+1. Edit `prompts/rag_answer.yaml` and increase its `version`.
+2. Run promptfoo (`npx promptfoo eval --no-cache -o results/latest.json` in `regression/`), then `python regression/check_regression.py`.
+3. If the gate **fails**, Langfuse shows a red `regression-check` trace with the reasons, and CI will fail once the results are committed.
+4. If the change is **intentional and better**, approve the new numbers: `python regression/check_regression.py --set-baseline`, and commit the new baseline with the prompt change.
+
+#### How CI enforces it
+
+`tests/test_regression_gate.py` runs on every push:
+- **The real gate:** the committed `results/latest.json` must pass against `baseline.json`.
+- **Fire drills:** fake runs prove the gate fails on a cost increase, a citation-accuracy drop, and a permission leak, and passes on a small normal cost wobble. These need no model, so they run in seconds.
+
+**Honest limitation:** GitHub Actions cannot run the assistant itself (it needs Ollama, Weaviate, the documents, and API keys, and running a model in the cloud would cost money). So promptfoo runs **locally** against the real system (about 48 minutes for 50 questions on a CPU-only laptop), and CI gates the **committed results**. The same approach is used for the Project 1 report card.
