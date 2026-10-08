@@ -1,0 +1,28 @@
+description: Bank RAG regression gate (golden questions)
+
+prompts:
+  - "{{question}}"
+
+providers:
+  - id: file://provider.py
+    label: bank-rag
+
+evaluateOptions:
+  maxConcurrency: 1   # one question at a time: one laptop CPU, and Cohere's free-trial rate limit
+
+tests:
+  - description: hr-annual-leave
+    vars:
+      user: ABC1
+      question: How many days of annual leave does a worker get?
+    assert:
+      - type: icontains
+        value: "30"
+
+  - description: refuse-out-of-scope
+    vars:
+      user: ABC1
+      question: What is the capital of France?
+    assert:
+      - type: icontains
+        value: "couldn't find"
