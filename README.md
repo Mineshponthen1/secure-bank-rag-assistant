@@ -2,20 +2,34 @@
 
 ![CI](https://github.com/Mineshponthen1/secure-bank-rag-assistant/actions/workflows/ci.yml/badge.svg)
 
-A retrieval-augmented generation (RAG) assistant that answers employee questions from real banking and employment documents, with **department-level access control**, **verifiable citations**, and **refusal by code** when the evidence is too weak.
+A retrieval-augmented generation (RAG) assistant that answers employee questions from real banking and employment documents, with **department-level access control**, **hybrid search with re-ranking**, **verifiable citations**, and **refusal by code** when the evidence is too weak.
 
-Built in Python as Project 1 of an Applied AI Engineer portfolio roadmap. Everything runs locally: no document text leaves the machine.
+Built in Python as Project 1 (and, below, Project 3) of an Applied AI Engineer portfolio roadmap. The language model, embeddings, vector database, and monitoring all run **locally**. The one external service is **Cohere Rerank** (free trial API), which receives the question and the retrieved passages. The source documents are public, but this matters for any private deployment.
 
+## Beyond the roadmap: security features added
+
+The roadmap asks for a RAG assistant with citations. Because this is a **bank** assistant, I added **access control** on top, which the roadmap does not require:
+
+| Feature | What it does |
+|---|---|
+| **Login with tokens (JWT)** | Every question requires a signed, expiring session token. Passwords are stored as bcrypt hashes, never in plain text |
+| **Admin approval** | New accounts start as *pending*; an admin approves them and assigns their department |
+| **Department-based access (RBAC)** | Each document chunk is tagged with the departments allowed to see it. Search is filtered *inside the database query*, so an HR user can never receive Finance or Operations content |
+| **Permission tests in the golden dataset** | 5 golden questions deliberately ask about other departments' documents; the report card fails if any forbidden source appears (**5/5 passing**), and the CI gate enforces it |
+
+**Why:** in a real bank, an HR employee must not see confidential Finance or Operations documents, even through an AI assistant. Filtering at retrieval means the model never sees restricted text in the first place, so it cannot leak it.
 
 ---
 
 ## What it does
 
 - **Answers questions from real documents** (UAE Labour Law, Basel Committee principles, FATF Recommendations)
-- **Respects permissions:** each department only searches the documents it is allowed to read, enforced inside the database query
+- **Finds the right passages:** hybrid search (meaning + keywords) builds a candidate list, then Cohere Rerank keeps the best 5
+- **Respects permissions:** each department only searches the documents it is allowed to read
 - **Cites its sources:** every claim gets a numbered footnote; clicking it opens the source and highlights the supporting passage
 - **Checks its own citations:** a verifier compares each claim with the cited passage, and flags weak or mismatched citations with ⚠ instead of trusting the model
-- **Refuses when it doesn't know:** if no retrieved passage is relevant enough, the code declines before the model is even called
+- **Refuses when it doesn't know:** if no passage scores high enough, the code declines before the model is even called
+- **Streams answers** word by word in the chat page
 
 ## Architecture
 
@@ -23,12 +37,15 @@ Built in Python as Project 1 of an Applied AI Engineer portfolio roadmap. Everyt
 flowchart LR
     A[Browser<br/>static/index.html] -- question + JWT --> B[FastAPI<br/>app.py]
     B -- embed question --> C[Ollama<br/>nomic-embed-text]
-    B -- vector search<br/>+ department filter --> D[(Weaviate<br/>246 chunks)]
-    D -- top 5 chunks --> B
-    B -- distance > 0.41? --> E[Refuse by code]
-    B -- numbered sources + rules --> F[Ollama<br/>llama3.2]
-    F -- answer with [n] citations --> G[Citation verifier]
+    B -- hybrid search<br/>+ department filter --> D[(Weaviate)]
+    D -- 20 candidates --> B
+    B -- re-rank --> R[Cohere Rerank]
+    R -- relevance scores --> B
+    B -- best score below 0.75 --> E[Refuse by code]
+    B -- top 5 sources + prompt v3 --> F[Ollama<br/>llama3.2]
+    F -- streamed answer with citations --> G[Citation verifier]
     G -- verified: highlight<br/>unverified: ⚠ --> A
+    B -. every step traced .-> L[Langfuse<br/>self-hosted]
 ```
 
 ## Key engineering decisions (and the evidence behind them)
@@ -36,27 +53,27 @@ flowchart LR
 **Chunk size: ~600 tokens, sentence-aware, with overlap.**
 Before choosing, I measured the documents (`inspect_pdfs.py`). The real documents average 400–570 tokens per page, so the roadmap's 500–800 token range fits. Chunks cross page breaks and record their page range. A `--preview` mode in `ingest.py` shows chunk sizes and overlap before anything is stored.
 
-**Relevance cut-off: 0.41 (cosine distance).**
-Measured with `measure_distances.py` on relevant questions and bank-sounding "near-miss" questions:
+**From a vector-distance cut-off to hybrid search + re-ranking.**
+The first version used vector search only, with a measured distance cut-off of 0.41 (`measure_distances.py`). Relevant and near-miss questions were only **0.022** apart, too narrow to be safe. Switching to **hybrid search + Cohere Rerank** and measuring again (`measure_rerank.py`) gave relevant questions **≥ 0.805** and irrelevant ones **≤ 0.675**, so the refusal line is now set at **0.75**, with a far wider safety margin.
 
-| Questions | Closest distance |
-|---|---|
-| Relevant (8 questions) | 0.190 – 0.397 |
-| Near-misses (e.g. "office dress code") | 0.419 – 0.433 |
-| Unrelated (e.g. "capital of France") | 0.563 – 0.597 |
-
-The gap is narrow (0.022), which is documented as a limitation. For a bank, a false refusal is cheaper than a false answer, so the line leans strict.
-
-**Top 5 retrieval (not 3).**
-`debug_retrieval.py` showed the annual-leave entitlement clause ranked **4th**: found, but not sent to the model. The chunk mixed the end of the previous article with the start of the leave article, so it looked "less about leave" than chunks that didn't contain the answer.
+**Top 5 sources (not 3).**
+`debug_retrieval.py` showed the annual-leave entitlement clause ranked **4th**: found, but it would not have been sent to the model with a top-3 setting.
 
 **Folder-based permissions.**
 The folder a PDF sits in decides who can read it (`documents/HR/`, `documents/General/`...), replacing an earlier filename-guessing rule that could mis-tag files.
 
-## Security
+**Prompts in versioned config files.**
+The answer prompt lives in `prompts/rag_answer.yaml` (currently **v3**), not in the code. Every answer, and every trace in Langfuse, is tagged with the prompt version.
+
+## Evaluation: golden dataset and CI gate
+
+- **50 golden questions** in `eval/questions.yaml`, in six categories: HR, general, finance, operations, **refusal** (questions the assistant must decline), and **security** (questions about other departments' documents).
+- **`eval/run_eval.py`** asks all 50 through the real API and produces a **report card**: correct answers, citations verified, refusals, and permission checks.
+- **CI gate (GitHub Actions):** the build fails if the latest committed report card is below **90% correct**, if any refusal question was answered, if any permission check leaked, or if any question errored.
+
+## Other security hardening
 
 - Project files are not served to the web (only `static/`)
-- Passwords hashed with **bcrypt**
 - **JWT** authentication on every protected endpoint: identity comes from the token, never from the request body
 - **CORS** restricted to known origins
 - Source text rendered safely (escaped before display; no source text inside `onclick` attributes)
@@ -74,7 +91,7 @@ The documents are public but copyrighted, so they are **not included** in this r
 
 ## How to run
 
-Requirements: Python 3.12+, Docker, and [Ollama](https://ollama.com).
+Requirements: Python 3.12+, Docker, [Ollama](https://ollama.com), and a free Cohere trial API key.
 
 ```bash
 # 1. Start Weaviate
@@ -89,11 +106,14 @@ python -m venv venv
 venv\Scripts\activate          # Windows (use: source venv/bin/activate on Mac/Linux)
 pip install -r requirements.txt
 
-# 4. Add the documents (see table above), then preview and ingest
+# 4. Add your Cohere key to a .env file
+#    COHERE_API_KEY=...
+
+# 5. Add the documents (see table above), then preview and ingest
 python ingest.py --preview
 python ingest.py
 
-# 5. Start the app, then open http://localhost:8000
+# 6. Start the app, then open http://localhost:8000
 python app.py
 ```
 
@@ -105,29 +125,33 @@ A default admin account (`admin` / `adminpassword`) is created on first run. **C
 |---|---|
 | `inspect_pdfs.py` | Measure words and tokens per page before choosing a chunk size |
 | `ingest.py` | Chunk, embed and store documents (`--preview` to inspect first) |
-| `measure_distances.py` | Measure relevant vs. irrelevant distances to set the cut-off |
-| `debug_retrieval.py` | Show the top 10 chunks for a question and where the answer ranked |
+| `measure_distances.py` | Measure vector distances (used for the first, vector-only cut-off) |
+| `measure_rerank.py` | Measure re-rank scores for relevant vs. irrelevant questions (sets the 0.75 line) |
+| `debug_retrieval.py` | Show the top chunks for a question and where the answer ranked |
+| `eval/run_eval.py` | Run the 50-question report card against the live API |
 
 ## Known limitations (honest list)
 
-- **The small model sometimes cites the wrong source.** `llama3.2` (3B) often quotes the right fact but attaches the wrong footnote, or cites article numbers instead of source numbers.
-- **The citation verifier matches words, not meaning.** It caught several wrong citations, but it was once fooled by an *article number*: the "30" in "Article (30) Maternity Leave" was accepted as support for "30 days of annual leave". Meaning-based checks are planned.
-- **Narrow relevance gap.** Relevant and near-miss questions are only 0.022 apart; re-ranking is planned to widen it.
+- **The small model sometimes cites the wrong source.** `llama3.2` (3B) often states the right fact but attaches the wrong footnote. The verifier catches many of these and marks them ⚠.
+- **The citation verifier matches words, not meaning.** It was once fooled by an *article number* (the "30" in "Article (30) Maternity Leave" accepted as support for "30 days of annual leave"). Meaning-based scoring with Braintrust autoevals is in progress.
+- **Slow on a CPU-only laptop:** a typical answer takes about a minute (see Project 3, Phase 2, below). Almost all of that time is the model, not the search.
+- **Cohere's free trial has a rate limit;** the app waits and retries when it is hit.
 - **Overlap averages ~45–55 tokens** rather than 100, because only whole sentences are carried over.
 - **PDF noise:** repeated page headers and contents pages are embedded along with the real text.
-- Answers are not streamed yet, and the front end is plain HTML/JavaScript (a React version is planned).
+- **The front end is plain HTML/JavaScript;** a React version is planned.
 
-## Roadmap status
+## Roadmap status (Project 1)
 
 - [x] Ingestion, chunking, vector storage
 - [x] Citations with highlighting and verification
 - [x] Refusal by code with a measured cut-off
-- [ ] Hybrid search (vector + keyword) and re-ranking
-- [ ] Prompts in versioned config files
-- [ ] Evaluation: golden dataset, automated scoring, CI gate
-- [ ] Streaming answers and a React front end
-
----
+- [x] Hybrid search (vector + keyword) and Cohere re-ranking
+- [x] Prompts in versioned config files
+- [x] Golden dataset (50 questions), report card, and CI gate
+- [x] Streaming answers
+- [ ] Named evaluation scores (faithfulness, answer relevance) with Braintrust autoevals — in progress
+- [ ] React front end with clickable citation viewer
+- [x] **Beyond the roadmap:** login, admin approval, and department-based access control
 
 ## Project 3: Observability & Monitoring
 

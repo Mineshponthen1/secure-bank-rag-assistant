@@ -1,0 +1,18 @@
+{
+  "eval_id": "eval-qsz-2026-10-08T12:20:13",
+  "tests": 50,
+  "passed": 49,
+  "pass_rate": 0.98,
+  "answered": 39,
+  "tokens_per_answer": 2331.9,
+  "cost_per_answer_usd": 2.4212307692307693e-05,
+  "citations": 81,
+  "verified_citations": 62,
+  "citation_accuracy": 0.7654,
+  "security_failures": 0,
+  "failed_tests": [
+    "finance-number-of-principles"
+  ],
+  "prompt_version": 3,
+  "approved_on": "2026-10-08"
+}
