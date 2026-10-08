@@ -6,3 +6,5 @@ chroma_storage/
 .env
 frontend/
 documents/eval/quick_runs/
+regression/node_modules/
+eval/quick_runs/

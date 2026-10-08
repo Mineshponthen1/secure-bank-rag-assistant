@@ -454,12 +454,14 @@ def secure_rag_query(data: QueryRequest, user: dict = Depends(get_current_user))
 @observe(name="rag-query", capture_input=False, capture_output=False)
 def answer_query(query: str, username: str, department: str, is_admin: bool):
     lf.update_current_span(input={"query": query})
+    # The "receipt": tokens and estimated cost. Stays at zero when the AI is never called.
+    usage = {"input_tokens": 0, "output_tokens": 0, "estimated_cost_usd": 0.0}
 
     if query.strip().lower() in GREETINGS:
         answer = greeting_text()
         lf.update_current_span(output={"answer": answer}, metadata={"outcome": "greeting"})
         record_scores(lf.score_current_trace, "greeting")
-        return {"user": username, "department": department, "answer": answer, "results": []}
+        return {"user": username, "department": department, "answer": answer, "results": [], "usage": usage}
 
     retrieved_contexts, results = retrieve(query, department, is_admin)
 
@@ -467,39 +469,42 @@ def answer_query(query: str, username: str, department: str, is_admin: bool):
     if not retrieved_contexts:
         lf.update_current_span(output={"answer": PROMPT["refusal"]}, metadata={"outcome": "refused"})
         record_scores(lf.score_current_trace, "refused")
-        return {"user": username, "department": department, "answer": PROMPT["refusal"], "results": []}
+        return {"user": username, "department": department, "answer": PROMPT["refusal"], "results": [], "usage": usage}
 
     try:
-        answer_text = generate_answer(query, department, retrieved_contexts)
+        answer_text, usage = generate_answer(query, department, retrieved_contexts)
     except Exception as e:
         answer_text = f"Error generating response from local LLM model: {str(e)}"
         lf.update_current_span(level="ERROR", status_message=str(e)[:200])
         record_scores(lf.score_current_trace, "failed")
-        return {"user": username, "department": department, "answer": answer_text, "results": results}
+        return {"user": username, "department": department, "answer": answer_text, "results": results, "usage": usage}
 
     answer_text = check_citations(answer_text, results)
     lf.update_current_span(output={"answer": answer_text},
                            metadata={"outcome": "answered", "sources": len(results)})
     record_scores(lf.score_current_trace, "answered", citation_counts(answer_text))
-    return {"user": username, "department": department, "answer": answer_text, "results": results}
+    return {"user": username, "department": department, "answer": answer_text, "results": results, "usage": usage}
 
 
 @observe(name="llm-answer", as_type="generation", capture_input=False, capture_output=False)
-def generate_answer(query: str, department: str, retrieved_contexts: list) -> str:
+def generate_answer(query: str, department: str, retrieved_contexts: list) -> tuple[str, dict]:
     messages = build_messages(query, department, retrieved_contexts)
     res = ollama.chat(model=PROMPT["model"], messages=messages)
     text = res["message"]["content"]
     usage = {"input": res["prompt_eval_count"] or 0, "output": res["eval_count"] or 0}
+    cost = estimate_cost(usage)
     lf.update_current_generation(
         model=PROMPT["model"],
         input=messages,
         output=text,
         usage_details=usage,
-        cost_details=estimate_cost(usage),
+        cost_details=cost,
         metadata={"prompt_name": "rag_answer", "prompt_version": PROMPT["version"]},
         version=str(PROMPT["version"]),
     )
-    return text
+    receipt = {"input_tokens": usage["input"], "output_tokens": usage["output"],
+               "estimated_cost_usd": cost["total"]}
+    return text, receipt
 
 
 @observe(name="citation-check", capture_input=False, capture_output=False)
