@@ -126,3 +126,91 @@ A default admin account (`admin` / `adminpassword`) is created on first run. **C
 - [ ] Prompts in versioned config files
 - [ ] Evaluation: golden dataset, automated scoring, CI gate
 - [ ] Streaming answers and a React front end
+
+---
+
+## Project 3: Observability & Monitoring
+
+> *Building the system is only 30% of the work; the remaining 70% is knowing whether it's actually working.*
+
+This project upgrades the RAG assistant above into a **monitored** system: every question is traced step by step, and its speed, cost, and quality are measured over time.
+
+### Phase 1: Full-stack tracing (Langfuse, self-hosted)
+
+Every question is recorded in **Langfuse**, running locally in Docker, so traces (including the questions staff ask) never leave the machine. The Langfuse Python SDK is built on **OpenTelemetry**.
+
+```
+rag-query                       who asked, department, prompt version, outcome
+├─ search
+│   └─ retrieval                pages kept/dropped, relevance scores
+│       └─ rerank               Cohere scores for every candidate, rate-limit warnings
+├─ llm-answer   [generation]    model, prompt version, tokens in/out, time to first token, cost
+└─ citation-check               citations, verified, unverified
+```
+
+- **Both endpoints are traced:** `/api/query` (used by the report card) and `/api/query/stream` (the chat page).
+- **Streaming is traced by hand:** while streaming, the web server hands work between threads, so automatic trace context can get lost. The streaming steps are created explicitly and attached to the root trace.
+- **Monitoring never breaks the product:** every tracing call in the streaming path goes through `trace_safely(...)`. If a tracing call fails, it prints a note and the answer continues.
+- **Every trace is tagged with the prompt version** (`prompt-v3`), answering the SRE question *"which prompt version produced this?"*.
+
+### Phase 2: Reliability metrics
+
+Measured on the 50-question golden dataset plus chat usage, on a **CPU-only laptop** (no GPU).
+
+#### Latency (from Langfuse)
+
+| | P50 | P90 | P95 | P99 |
+|---|---|---|---|---|
+| **Whole question** (`rag-query`) | **59 s** | 1 min 29 s | **1 min 40 s** | 47 min 47 s* |
+| AI answer (`llm-answer`) | 65 s | 1 min 30 s | 1 min 39 s | * |
+| Search (`search`) | 1.1 s | 2.8 s | 2.9 s | |
+| Re-rank (`rerank`, Cohere) | 1.0 s | 1.3 s | 1.7 s | |
+| Citation check | 0.09 s | 0.23 s | 0.27 s | |
+
+**Finding:** search, re-ranking, and the citation check take **1 to 3 seconds** together; the **AI model takes about a minute**. On this hardware, all meaningful speed gains are in the model step (fewer or shorter retrieved pages, or a GPU server), not in retrieval.
+
+\* **The P99 is a single outlier:** one question during an unattended run, most likely frozen while the laptop slept. With about 60 traces, P99 is effectively the single worst question. This is exactly the kind of case an average hides and a percentile reveals.
+
+#### Cost per request
+
+Cost is calculated **from logged token counts**, using the per-token price in [`config/pricing.yaml`](config/pricing.yaml).
+
+- The model runs locally, so its **actual cost is $0**. The configured price answers *"what would the same answers cost if this model were served by a hosted API?"*, using a published Llama 3.2 3B Instruct API price ($0.01 per million input tokens, $0.02 per million output tokens; source and date are in the config file).
+- **About $0.00004 to $0.00007 per answered question**, which is roughly 15,000 to 25,000 questions per $1. Most tokens are **input** (the retrieved pages), not the answer itself.
+- **Refused questions cost nothing**: the refusal happens in code, before the model is called.
+
+#### Quality over time (Langfuse scores)
+
+Every trace gets two scores:
+
+| Score | Values | Result |
+|---|---|---|
+| `outcome` | answered / refused / failed / greeting | Gives the refusal and failure rates over time |
+| `citation_coverage` | 0 to 1: the share of an answer's citations that were verified (an answer with no citations scores 0) | **Average 0.62** across 41 answers: 18 at 1.0, 10 at 0.0 |
+
+The report card on the same run: **35/38 correct**, **6/6 refused correctly**, **5/5 permission checks**, and **62 of 83 citations verified (75%)**.
+
+**Finding:** several **Finance and Operations** answers were correct but had **no citations at all**, so the reader cannot check them. This didn't show up in the "correct / incorrect" score, and only became visible through citation-coverage monitoring.
+
+### Running the monitoring stack
+
+```bash
+# Langfuse (self-hosted), from its own folder
+git clone https://github.com/langfuse/langfuse.git
+cd langfuse
+docker compose up -d          # then open http://localhost:3000, create a project and API keys
+```
+
+Add the keys to `.env`:
+
+```
+LANGFUSE_PUBLIC_KEY=pk-lf-...
+LANGFUSE_SECRET_KEY=sk-lf-...
+LANGFUSE_HOST=http://localhost:3000
+```
+
+Then start the app as usual (`python app.py`). Every question appears in Langfuse → **Tracing**.
+
+### Phase 3: Regression gating
+
+*Coming next: if a new prompt increases token cost or decreases citation accuracy, it is flagged and CI fails.*
