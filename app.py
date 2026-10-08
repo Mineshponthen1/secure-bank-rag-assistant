@@ -62,6 +62,18 @@ with open(PROMPT_FILE, encoding="utf-8") as f:
 print(f"[prompt] loaded rag_answer v{PROMPT['version']} (model: {PROMPT['model']})")
 lf = get_client()   # Langfuse messenger: sends every trace to the self-hosted Langfuse (keys in .env)
 
+# Estimated cost per request (see config/pricing.yaml): token counts x a hosted per-token price
+PRICING_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config", "pricing.yaml")
+with open(PRICING_FILE, encoding="utf-8") as f:
+    PRICING = yaml.safe_load(f)
+
+
+def estimate_cost(usage: dict) -> dict:
+    """USD cost if this model were served by a hosted API. The local model itself costs $0."""
+    cost_in = usage["input"] / 1_000_000 * PRICING["usd_per_million_input_tokens"]
+    cost_out = usage["output"] / 1_000_000 * PRICING["usd_per_million_output_tokens"]
+    return {"input": cost_in, "output": cost_out, "total": cost_in + cost_out}
+
 
 def hash_password(password: str) -> str:
     return bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
@@ -419,6 +431,13 @@ def trace_safely(action, **fields):
     except Exception as e:
         print(f"[tracing] skipped {getattr(action, '__name__', 'call')}: {e}")
 
+def record_scores(score_fn, outcome: str, counts: dict | None = None):
+    """Attach quality scores to the trace: what happened, and (for answers) citation coverage."""
+    trace_safely(score_fn, name="outcome", value=outcome, data_type="CATEGORICAL")
+    if counts is not None:
+        coverage = counts["verified"] / counts["citations"] if counts["citations"] else 0.0
+        trace_safely(score_fn, name="citation_coverage", value=round(coverage, 3), data_type="NUMERIC")
+
 
 @app.post("/api/query")
 def secure_rag_query(data: QueryRequest, user: dict = Depends(get_current_user)):
@@ -439,6 +458,7 @@ def answer_query(query: str, username: str, department: str, is_admin: bool):
     if query.strip().lower() in GREETINGS:
         answer = greeting_text()
         lf.update_current_span(output={"answer": answer}, metadata={"outcome": "greeting"})
+        record_scores(lf.score_current_trace, "greeting")
         return {"user": username, "department": department, "answer": answer, "results": []}
 
     retrieved_contexts, results = retrieve(query, department, is_admin)
@@ -446,6 +466,7 @@ def answer_query(query: str, username: str, department: str, is_admin: bool):
     # Refuse by code (not by hoping the AI notices) when no chunk is relevant enough
     if not retrieved_contexts:
         lf.update_current_span(output={"answer": PROMPT["refusal"]}, metadata={"outcome": "refused"})
+        record_scores(lf.score_current_trace, "refused")
         return {"user": username, "department": department, "answer": PROMPT["refusal"], "results": []}
 
     try:
@@ -453,10 +474,13 @@ def answer_query(query: str, username: str, department: str, is_admin: bool):
     except Exception as e:
         answer_text = f"Error generating response from local LLM model: {str(e)}"
         lf.update_current_span(level="ERROR", status_message=str(e)[:200])
+        record_scores(lf.score_current_trace, "failed")
+        return {"user": username, "department": department, "answer": answer_text, "results": results}
 
     answer_text = check_citations(answer_text, results)
     lf.update_current_span(output={"answer": answer_text},
                            metadata={"outcome": "answered", "sources": len(results)})
+    record_scores(lf.score_current_trace, "answered", citation_counts(answer_text))
     return {"user": username, "department": department, "answer": answer_text, "results": results}
 
 
@@ -465,11 +489,13 @@ def generate_answer(query: str, department: str, retrieved_contexts: list) -> st
     messages = build_messages(query, department, retrieved_contexts)
     res = ollama.chat(model=PROMPT["model"], messages=messages)
     text = res["message"]["content"]
+    usage = {"input": res["prompt_eval_count"] or 0, "output": res["eval_count"] or 0}
     lf.update_current_generation(
         model=PROMPT["model"],
         input=messages,
         output=text,
-        usage_details={"input": res["prompt_eval_count"] or 0, "output": res["eval_count"] or 0},
+        usage_details=usage,
+        cost_details=estimate_cost(usage),
         metadata={"prompt_name": "rag_answer", "prompt_version": PROMPT["version"]},
         version=str(PROMPT["version"]),
     )
@@ -509,6 +535,7 @@ def secure_rag_query_stream(data: QueryRequest, user: dict = Depends(get_current
             if data.query.strip().lower() in GREETINGS:
                 answer = greeting_text()
                 trace_safely(root.update, output={"answer": answer}, metadata={"outcome": "greeting"})
+                record_scores(root.score_trace, "greeting")
                 yield send({"type": "final", "answer": answer, "results": []})
                 return
 
@@ -518,12 +545,14 @@ def secure_rag_query_stream(data: QueryRequest, user: dict = Depends(get_current
                     retrieved_contexts, results = retrieve(data.query, department, is_admin)
             except HTTPException as e:
                 trace_safely(root.update, level="ERROR", status_message=str(e.detail))
+                record_scores(root.score_trace, "failed")
                 yield send({"type": "error", "detail": e.detail})
                 return
 
             # Refuse by code (not by hoping the AI notices) when no chunk is relevant enough
             if not retrieved_contexts:
                 trace_safely(root.update, output={"answer": PROMPT["refusal"]}, metadata={"outcome": "refused"})
+                record_scores(root.score_trace, "refused")
                 yield send({"type": "final", "answer": PROMPT["refusal"], "results": []})
                 return
 
@@ -541,6 +570,7 @@ def secure_rag_query_stream(data: QueryRequest, user: dict = Depends(get_current
             except Exception as e:
                 trace_safely(gen.update, level="ERROR", status_message=str(e)[:200])
                 trace_safely(root.update, level="ERROR", status_message="LLM call failed")
+                record_scores(root.score_trace, "failed")
                 yield send({"type": "error", "detail": f"Error generating response from local LLM model: {e}"})
                 return
             finally:
@@ -549,6 +579,7 @@ def secure_rag_query_stream(data: QueryRequest, user: dict = Depends(get_current
                     usage = {"input": last_part["prompt_eval_count"] or 0, "output": last_part["eval_count"] or 0}
                 trace_safely(gen.update, model=PROMPT["model"], input=messages, output=answer_text,
                              usage_details=usage, completion_start_time=first_token_at,
+                             cost_details=estimate_cost(usage) if usage else None,
                              metadata={"prompt_name": "rag_answer", "prompt_version": PROMPT["version"]},
                              version=str(PROMPT["version"]))
                 trace_safely(gen.end)
@@ -556,11 +587,13 @@ def secure_rag_query_stream(data: QueryRequest, user: dict = Depends(get_current
             # The answer is complete: now check and verify the citations, then send the final version
             cit = root.start_observation(name="citation-check", as_type="span")
             final = finalize(answer_text, results)
-            trace_safely(cit.update, output=citation_counts(final))
+            counts = citation_counts(final)
+            trace_safely(cit.update, output=counts)
             trace_safely(cit.end)
 
             trace_safely(root.update, output={"answer": final},
                          metadata={"outcome": "answered", "sources": len(results)})
+            record_scores(root.score_trace, "answered", counts)
             yield send({"type": "final", "answer": final, "results": results})
         finally:
             trace_safely(root.end)

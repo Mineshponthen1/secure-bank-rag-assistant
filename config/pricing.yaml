@@ -1,0 +1,9 @@
+# Estimated cost per request, used for cost monitoring (Project 3, Phase 2).
+# The local Ollama model itself costs $0. These prices answer: "what would the
+# same answers cost if this model were served by a hosted API?"
+model: llama3.2
+reference: Llama 3.2 3B Instruct (hosted API)
+usd_per_million_input_tokens: 0.01
+usd_per_million_output_tokens: 0.02
+source: https://anotherwrapper.com/llm-pricing/llama-3.2-3b-instruct
+checked: 2026-10-08
